@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import urllib.error
 from pathlib import Path
 
@@ -103,6 +104,22 @@ def main() -> int:
     finally:
         h.urllib.request.urlopen = original_urlopen
     print("PASS: mutation transport makes one attempt and hides low-level cause")
+
+    class _FakeHTTPError(urllib.error.HTTPError):
+        def __init__(self, code, body):
+            super().__init__("http://x", code, "msg", {}, io.BytesIO(body))
+
+    def rate_limited_urlopen(*args, **kwargs):
+        raise _FakeHTTPError(429, b'{"message": "rate limited"}')
+
+    h.urllib.request.urlopen = rate_limited_urlopen
+    try:
+        expect_runtime_error(
+            lambda: h._request("GET", "/search", secret), "rate limit"
+        )
+    finally:
+        h.urllib.request.urlopen = original_urlopen
+    print("PASS: HTTP 429 gets a clear rate-limit message, not a generic HTTP-error one")
 
     expect_runtime_error(
         lambda: h.notion_create_page(
