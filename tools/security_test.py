@@ -82,7 +82,14 @@ def main() -> int:
     assert "field-value-here" not in h._redact(
         "NOTION_API_KEY=field-value-here", "unrelated"
     )
-    print("PASS: pattern-based redaction (token shape, Authorization header, field name)")
+    # A leading \b word-boundary requirement let a token glued directly onto a
+    # preceding word character (no separator) through unredacted - e.g. an
+    # exception message that happens to read "...mysecret_<token>..." rather
+    # than "...my secret_<token>..." or "...my=secret_<token>...".
+    glued_token = "a1b2c3d4e5f6g7h8i9j0k1l2m3"
+    assert glued_token not in h._redact(f"prefixntn_{glued_token}", "unrelated")
+    assert glued_token not in h._redact(f"wordsecret_{glued_token}", "unrelated")
+    print("PASS: pattern-based redaction (token shape, Authorization header, field name, glued-on tokens)")
 
     calls = {"count": 0}
     original_urlopen = h.urllib.request.urlopen
@@ -106,8 +113,8 @@ def main() -> int:
     print("PASS: mutation transport makes one attempt and hides low-level cause")
 
     class _FakeHTTPError(urllib.error.HTTPError):
-        def __init__(self, code, body):
-            super().__init__("http://x", code, "msg", {}, io.BytesIO(body))
+        def __init__(self, code, body, headers=None):
+            super().__init__("http://x", code, "msg", headers or {}, io.BytesIO(body))
 
     def rate_limited_urlopen(*args, **kwargs):
         raise _FakeHTTPError(429, b'{"message": "rate limited"}')
@@ -120,6 +127,20 @@ def main() -> int:
     finally:
         h.urllib.request.urlopen = original_urlopen
     print("PASS: HTTP 429 gets a clear rate-limit message, not a generic HTTP-error one")
+
+    def rate_limited_with_retry_after(*args, **kwargs):
+        raise _FakeHTTPError(
+            429, b'{"message": "rate limited"}', headers={"Retry-After": "30"}
+        )
+
+    h.urllib.request.urlopen = rate_limited_with_retry_after
+    try:
+        expect_runtime_error(
+            lambda: h._request("GET", "/search", secret), "30 seconds"
+        )
+    finally:
+        h.urllib.request.urlopen = original_urlopen
+    print("PASS: HTTP 429 with a Retry-After header surfaces the actual wait time")
 
     expect_runtime_error(
         lambda: h.notion_create_page(

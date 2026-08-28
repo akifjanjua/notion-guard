@@ -211,6 +211,17 @@ def test_get_data_source_schema(h) -> None:
         assert "ds-a" in str(exc) and "ds-b" in str(exc)
     print("PASS: notion_get_data_source_schema multi-data-source database rejected with ids listed")
 
+    def fake_request_malformed_single(method, path, api_key, body=None, query=None, is_write=False):
+        return 200, {"data_sources": ["not-a-dict-entry"]}
+
+    h._request = fake_request_malformed_single
+    try:
+        h.notion_get_data_source_schema({"database_id": "db-malformed"}, None)
+        raise AssertionError("expected malformed single-entry rejection")
+    except RuntimeError as exc:
+        assert "malformed" in str(exc).lower()
+    print("PASS: notion_get_data_source_schema single malformed data source entry rejected cleanly, not an uncaught AttributeError")
+
 
 def test_query_data_source(h) -> None:
     def fake_request(method, path, api_key, body=None, query=None, is_write=False):
@@ -420,6 +431,21 @@ def test_require_id_validation(h) -> None:
         must_reject(bad, "control character or space")
     for bad in ("../../v1/users", "abc/def", "abc\\def", "/etc/passwd"):
         must_reject(bad, "path separator")
+    # The underlying constraint is "HTTP request lines must be pure ASCII", not
+    # "no control characters specifically" - a non-ASCII character (NBSP, a
+    # Unicode line separator, an RTL override, an emoji, an accented letter)
+    # crashes the same way a raw \r\n does, with a different exception type
+    # (UnicodeEncodeError instead of http.client.InvalidURL) that _request's
+    # handlers don't catch either. Reject the whole non-ASCII class up front.
+    for bad in (
+        "abc\u00a0def",  # NBSP
+        "abc\u2028def",  # Unicode line separator
+        "abc\u202edef",  # RTL override
+        "abc\u200bdef",  # zero-width space
+        "caf\u00e9",  # accented letter
+        "abc\U0001F600def",  # emoji
+    ):
+        must_reject(bad, "ASCII")
     assert h._require_id("1f2e3d4c-5b6a-7980-9c8d-0e1f2a3b4c5d", "page_id") == (
         "1f2e3d4c-5b6a-7980-9c8d-0e1f2a3b4c5d"
     )
