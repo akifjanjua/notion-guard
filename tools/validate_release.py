@@ -219,6 +219,7 @@ def main() -> int:
 
     workflow_text = ci_workflow.read_text(encoding="utf-8")
     for command in (
+        "python tools/command_logic_test.py",
         "python tools/egress_contract_test.py",
         "python tools/verify_module_tree.py .",
         "python tools/build_release.py",
