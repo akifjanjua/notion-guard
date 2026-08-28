@@ -6,9 +6,9 @@ Notion Guard — Governed Notion Integration
 
 ## Repository
 
-https://github.com/akifjanjua/notion-guard (branch `main`, HEAD `108402817b91d813014cf2cc87c5fcb4d1b6b34a`)
+https://github.com/akifjanjua/notion-guard (branch `main`, HEAD `28a7e79d3dacbce1d1d3c37bb9bdb6062b596634` at time of writing — check the branch for later commits)
 
-**Note before submitting:** this repository is currently **private**. Flip it to public (or grant reviewer access) before the submission is reviewed — a private repo's README/CI links won't resolve for anyone else until then.
+The repository is **public** — README and CI links resolve for anyone.
 
 ## Description
 
@@ -22,7 +22,7 @@ Notion Guard resolves credentials only through RailCall's vault helper, uses cer
 
 I tested it against the real Notion REST API with no mocks or stubs. The public CI workflow (GitHub Actions) tests Python 3.10, 3.12, and 3.13, runs an offline security suite and a model-provider egress contract test, and verifies the final release archive byte-for-byte against the committed Git tree. Latest green run: https://github.com/akifjanjua/notion-guard/actions/runs/33191114813
 
-Marketplace listing: **[NOT YET PUBLISHED — `railcall market publish` has deliberately not been run yet; paste the resulting listing URL here once it is]**
+Marketplace listing: https://railcall.ai/marketplace/muhammad-akif-janjua/notion-guard — `railcall market publish` succeeded and the listing page is live (verified independently: real HTTP 200, correct title, publisher name, and category). Note: as of publishing, `railcall market get`/`market list` (the CLI's install-facing catalog) had not yet indexed the listing — a possible platform indexing lag, not a re-check of our own; the public storefront page itself is confirmed live.
 
 README URL: https://github.com/akifjanjua/notion-guard/blob/main/README.md
 

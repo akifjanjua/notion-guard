@@ -6,6 +6,7 @@ Real changes since the 1.0.0 initial commit (not yet a new tagged version — `m
 
 ### Fixed
 
+- `CONTEST_SUBMISSION.md` and `PUBLISH_CHECKLIST.md` still said the repo was private and the marketplace listing was not yet published — both are now stale: the repo went public and `railcall market publish` succeeded. Updated both with the real state, including an honest note that the CLI's install-facing catalog (`market get`/`market list`) had not yet indexed the listing as of publishing even though the storefront page itself is confirmed live.
 - `module.json`'s `description` field — the literal text shown on the live public marketplace listing page — repeated the exact same wrong-card credential instruction already found and fixed in README.md/SECURITY.md/`docs/TROUBLESHOOTING.md`/`MARKETPLACE_LISTING.md`: "configure the integration secret through RailCall Studio, Integrations, Notion" without naming the namespaced card. This was the most publicly visible instance of the four, since it's the text actually live on the marketplace right now. Now names `muhammad-akif-janjua-notion-guard::notion` explicitly.
 
 ### Added

@@ -67,9 +67,9 @@ After merging, update local `main` and repeat steps 3–4 against the merged com
 
 ## 6. Remaining before an actual `railcall market publish`
 
-- [ ] Flip the GitHub repo from private to public (or grant reviewer access) — `README.md`/CI links won't resolve to reviewers otherwise.
+- [x] Flip the GitHub repo from private to public (or grant reviewer access) — `README.md`/CI links won't resolve to reviewers otherwise. Done: repo is public, `homepage`/`tests_url` verified reachable with real unauthenticated requests.
 - [ ] Record the demo video per `VIDEO_SCRIPT.md` and fill in the URL in `CONTEST_SUBMISSION.md`.
-- [ ] Fill in the marketplace listing URL in `CONTEST_SUBMISSION.md` once step 7 below produces one.
+- [x] Fill in the marketplace listing URL in `CONTEST_SUBMISSION.md` once step 7 below produces one. Done: `railcall market publish` succeeded, listing confirmed live at https://railcall.ai/marketplace/muhammad-akif-janjua/notion-guard — but `railcall market get`/`market list` had not yet indexed it as of publishing; recheck before relying on `railcall market install` working.
 
 ## 7. Publish once
 
