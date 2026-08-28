@@ -6,6 +6,7 @@ Real changes since the 1.0.0 initial commit (not yet a new tagged version — `m
 
 ### Fixed
 
+- `_redact` was literal-substring-only: it only removed the exact `secret` value passed in at each call site, so a credential leaking through any other string wouldn't be caught. Now layers three regex patterns on top (matching Linear Guard's `_redact` design): known Notion token shapes (`secret_...`/`ntn_...`), `Authorization:` header values, and `NOTION_API_KEY` field assignments — each independent of whether the exact secret value is known at the call site.
 - `_extract_api_key` now also recognizes the bare fields-dict shape (`{"NOTION_API_KEY": "..."}`) that RailCall Station's `credential_resolver.resolve()` actually returns for named credentials saved through Studio Integrations, not just the `{"fields": {...}}`-wrapped shape. Without this, a correctly-saved credential still reported "not configured."
 - `_bounded_page_size` silently truncated a non-integer float `page_size` (`int(10.9)` → `10`) instead of rejecting it; now raises the same "must be an integer" error a malformed string input already got.
 - `_extract_error_message` capped the raw-body fallback at 300 characters but not a `message` field pulled from Notion's own JSON error payload; an unusually long Notion error could land unbounded in a signed receipt. Now capped the same way.

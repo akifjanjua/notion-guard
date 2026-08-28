@@ -69,6 +69,20 @@ def main() -> int:
     assert "[REDACTED]" in redacted
     print("PASS: active secret redaction")
 
+    # Pattern-based redaction must catch a credential-shaped string even when
+    # it is NOT the exact `secret` argument passed in (defense in depth,
+    # matching Linear Guard's regex-based _redact design) - not just literal
+    # substring replacement of a known value.
+    leaked_token = "ntn_" + "a1b2c3d4e5f6g7h8i9j0k1l2m3"
+    assert leaked_token not in h._redact(f"leak: {leaked_token}", "unrelated")
+    assert "some-header-value" not in h._redact(
+        "Authorization: some-header-value", "unrelated"
+    )
+    assert "field-value-here" not in h._redact(
+        "NOTION_API_KEY=field-value-here", "unrelated"
+    )
+    print("PASS: pattern-based redaction (token shape, Authorization header, field name)")
+
     calls = {"count": 0}
     original_urlopen = h.urllib.request.urlopen
 
