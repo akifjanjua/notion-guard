@@ -6,7 +6,7 @@ Notion Guard — Governed Notion Integration
 
 ## Repository
 
-https://github.com/akifjanjua/notion-guard (branch `main`, HEAD `1a0c6134432a7bb2f7d20114cd20366355ee6dd9`)
+https://github.com/akifjanjua/notion-guard (branch `main`, HEAD `108402817b91d813014cf2cc87c5fcb4d1b6b34a`)
 
 **Note before submitting:** this repository is currently **private**. Flip it to public (or grant reviewer access) before the submission is reviewed — a private repo's README/CI links won't resolve for anyone else until then.
 
@@ -34,7 +34,7 @@ Demo video: **[PASTE UNLISTED YOUTUBE URL — record per `VIDEO_SCRIPT.md`, not 
 
 - **Signature**: signed with the real registered publisher key (fingerprint `e469d55383447fc6b95cbffb786fee7c…`), independently verified both by this repo's own `tools/verify_module_tree.py` (Ed25519, RailCall v2 tree spec) and by RailCall's own CLI (`railcall market module verify`): `✓ signature valid`, `ownership: ✓ signed by your local key`.
 - **Release reproducibility**: `tools/build_release.py` + `tools/release_acceptance_test.py` confirm the packaged archive is byte-for-byte identical to the committed Git tree and rebuilds deterministically.
-- **Real end-to-end write, not a mock**: executed a real `notion.search` (receipt `cmd/cmd_20260828T165238Z_notion_search_475cc19c_executed_0004.json`, `http_status: 200`, returned the live "Test Tasks" data source) followed by an approved, executed `notion.create_page` against that data source through RailCall Studio's preview → approve → execute airlock. The resulting row was confirmed visible live in the Notion workspace. (The `create_page` receipt id wasn't captured in this session's transcript — pull it from Studio's Runs tab, filter `#/receipts?command=notion.create_page`, before final submission.)
+- **Real end-to-end write, not a mock**: executed a real `notion.search` (receipt `cmd/cmd_20260828T165238Z_notion_search_475cc19c_executed_0004.json`, `http_status: 200`, returned the live "Test Tasks" data source) followed by an approved, executed `notion.create_page` against that data source through RailCall Studio's preview → approve → execute airlock (receipt `cmd/cmd_20260828T171009Z_notion_create_page_db9b3fa2_executed_0008.json`, integrity `sha256:6615c2257f7adeb57fb957681145fbb1ceb4d3ab80138d3a3e91a71638726a16f`, signed with key `ecac7bc46608cb35`). The resulting row was confirmed visible live in the Notion workspace.
 - **Sandbox enforcement, not just declaration**: Station's own boot log shows the gate actually installed for this module: `network gate armed — allow: ['api.notion.com']`, `subprocess gate CLOSED`, `filesystem-write gate active — allow: (none)`.
 
 ## Trust declaration
