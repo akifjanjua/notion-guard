@@ -4,6 +4,10 @@
 
 Real changes since the 1.0.0 initial commit (not yet a new tagged version — `module.json` still reads `1.0.0`). Every entry below was committed, offline-tested, re-signed with the real registered publisher key, independently re-verified (both this repo's own `tools/verify_module_tree.py` and RailCall's own `railcall market module verify`), and confirmed green on CI before merging.
 
+### Fixed
+
+- `module.json`'s `description` field — the literal text shown on the live public marketplace listing page — repeated the exact same wrong-card credential instruction already found and fixed in README.md/SECURITY.md/`docs/TROUBLESHOOTING.md`/`MARKETPLACE_LISTING.md`: "configure the integration secret through RailCall Studio, Integrations, Notion" without naming the namespaced card. This was the most publicly visible instance of the four, since it's the text actually live on the marketplace right now. Now names `muhammad-akif-janjua-notion-guard::notion` explicitly.
+
 ### Added
 
 - `docs/TROUBLESHOOTING.md` gained two new entries documenting real limitations found during a deeper adversarial/idempotency pass: retrying `create_page`/`append_blocks`/`create_comment` after an "outcome is unknown" error can create a duplicate, because Notion's REST API has no client-supplied idempotency key for these endpoints (`update_page_properties` is naturally safe from this, since re-applying the same values is idempotent); and two concurrent `update_page_properties` calls setting the same property on the same page race with silent last-write-wins, since Notion's API has no optimistic-concurrency support. Both are Notion API limitations, not something Notion Guard can detect or prevent. README's Limitations section gained a one-sentence cross-reference to the same effect.
