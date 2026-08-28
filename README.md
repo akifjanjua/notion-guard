@@ -14,7 +14,7 @@ Writes: `notion.create_page`, `notion.update_page_properties`, `notion.append_bl
 
 ## Egress contract
 
-The signed manifest declares `"allowed_destinations": []`. Notion Guard permits **zero LLM/model-provider destinations**. It does not call Anthropic, OpenAI, Groq, Gemini, xAI, or Ollama, and does not invoke RailCall's model-completion primitive. Its HTTPS traffic is limited to the declared business integration at `api.notion.com`, using the credential obtained from RailCall Vault. CI fails if model-provider SDKs, provider hosts, or `station_llm` usage are introduced.
+The signed manifest declares `"allowed_destinations": [{"provider":"notion","hosts":["api.notion.com"]}]` — exactly the Notion API host, **zero LLM/model-provider destinations**. It does not call Anthropic, OpenAI, Groq, Gemini, xAI, or Ollama, and does not invoke RailCall's model-completion primitive. A `requires` block (`network: ["api.notion.com"]`, `subprocess: false`, `filesystem_writes: []`) has Station enforce the same posture at handler-load time, not just document it. CI fails if model-provider SDKs, provider hosts, or `station_llm` usage are introduced.
 
 ## Install
 

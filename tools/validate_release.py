@@ -69,6 +69,7 @@ def main() -> int:
         "publisher_pubkey",
         "provider",
         "auth",
+        "credential_spec",
         "allowed_destinations",
         "description",
         "commands",
@@ -100,8 +101,25 @@ def main() -> int:
     if manifest.get("auth") != expected_auth:
         fail("auth block does not match the reviewer-required Notion vault declaration")
 
-    if manifest.get("allowed_destinations") != []:
-        fail("allowed_destinations must be an explicit empty list (zero model-provider egress)")
+    expected_allowed_destinations = [{"provider": "notion", "hosts": ["api.notion.com"]}]
+    if manifest.get("allowed_destinations") != expected_allowed_destinations:
+        fail(
+            "allowed_destinations must declare exactly the Notion API host "
+            f"({expected_allowed_destinations!r}) and zero LLM/model-provider entries"
+        )
+
+    expected_credential_spec = {
+        "provider": "notion",
+        "category": "Docs & Workspace",
+        "name": "Notion",
+        "required": ["NOTION_API_KEY"],
+        "optional": [],
+        "shape": "dict",
+        "risk": "medium",
+        "read_write": "write",
+    }
+    if manifest.get("credential_spec") != expected_credential_spec:
+        fail("credential_spec does not match the reviewer-required Notion declaration")
 
     if not re.fullmatch(r"\d+\.\d+\.\d+", str(manifest["version"])):
         fail("version must use semantic x.y.z form")
@@ -228,7 +246,8 @@ def main() -> int:
     print("PASS: handler.py parses")
     print("PASS: 10 expected commands are present")
     print("PASS: homepage and tests_url are declared")
-    print("PASS: signed manifest declares zero model-provider destinations")
+    print("PASS: signed manifest declares its egress destination (notion API only, zero LLM/model-provider destinations)")
+    print("PASS: credential_spec matches the reviewer-required Notion declaration")
     print("PASS: all write commands require approval")
     print("PASS: previews and signed receipts are required")
     print("PASS: reviewer-blocked credential and subprocess paths are absent")

@@ -12,7 +12,11 @@ All Notion requests use Python `urllib.request` with certificate and hostname ve
 
 ## Model-provider egress contract
 
-`module.json` declares `"allowed_destinations": []`. The signed declaration means the module permits no LLM/model-provider calls. Notion's REST API is the module's business integration endpoint and is not routed through any model-completion primitive. A dedicated CI test rejects imports, hostnames, or source references associated with supported model providers and rejects any use of `station_llm`.
+`module.json` declares `"allowed_destinations": [{"provider":"notion","hosts":["api.notion.com"]}]` — exactly the Notion API host and nothing else. The signed declaration means the module permits no LLM/model-provider calls; Notion's REST API is the module's only business integration endpoint and is not routed through any model-completion primitive. A dedicated CI test rejects imports, hostnames, or source references associated with supported model providers and rejects any use of `station_llm`.
+
+## Sandbox posture
+
+`module.json` also declares a `requires` block that RailCall Station enforces at handler-load time: `network: ["api.notion.com"]` (a contextvar-scoped gate — any request to a host outside this allowlist raises `SandboxViolation`), `subprocess: false` (subprocess/`os.system`/`os.exec*` are blocked in the handler's namespace), and `filesystem_writes: []` (no filesystem writes are permitted at all). This matches Notion Guard's actual behavior — one HTTPS host, no subprocess use, no local file writes — as an enforced guarantee rather than only a documented one.
 
 ## Governance
 
