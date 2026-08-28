@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.0.1
 
-Real changes since the 1.0.0 initial commit (not yet a new tagged version — `module.json` still reads `1.0.0`). Every entry below was committed, offline-tested, re-signed with the real registered publisher key, independently re-verified (both this repo's own `tools/verify_module_tree.py` and RailCall's own `railcall market module verify`), and confirmed green on CI before merging.
+Real changes since the 1.0.0 initial commit. Every entry below was committed, offline-tested, re-signed with the real registered publisher key, independently re-verified (both this repo's own `tools/verify_module_tree.py` and RailCall's own `railcall market module verify`), and confirmed green on CI before merging. Version bumped to 1.0.1 because the marketplace backend requires a strictly-increasing version to accept a republish (discovered when republishing to set a price — `HTTP 409: version "1.0.0" must be strictly greater than the currently published version`).
 
 ### Fixed
 

@@ -53,9 +53,11 @@ python tools/release_acceptance_test.py
 Expected assets:
 
 ```text
-dist/notion-guard-v1.0.0.zip
-dist/notion-guard-v1.0.0.files.json
+dist/notion-guard-v1.0.1.zip
+dist/notion-guard-v1.0.1.files.json
 ```
+
+(The version segment tracks `module.json`'s `version` field — update this if it changes again.)
 
 **Do not proceed if `release_acceptance_test.py` fails for any reason**, including the official-CLI check being unavailable — investigate and fix, don't skip.
 
@@ -76,7 +78,11 @@ After merging, update local `main` and repeat steps 3–4 against the merged com
 Publish only from a verified, clean `main` where steps 1–5 above all passed on the latest commit:
 
 ```bash
-railcall market publish . --type=module
+railcall market publish . --type=module --price=6900
 ```
+
+**`--price=6900` ($69.00) must be included on every republish, with no exceptions.** There is no CLI mechanism to edit a live listing directly — a republish (same `--id`, higher `--version`) is the only way to change anything about it, including price. Unlike `category`, which the marketplace preserves from the current listing when omitted, `price_cents` has no such fallback: it defaults to `0` (free) every time `--price` isn't passed. Forgetting this flag on a future republish (e.g. a routine bug-fix bump) silently resets the listing back to free. Confirmed directly in `railcall_cli.py`'s `_market_publish_module`.
+
+**The marketplace also requires a strictly-increasing `version` to accept a republish at all** (`HTTP 409: version "X" must be strictly greater than the currently published version`) — bump `module.json`'s `version` (and this checklist's dist filenames above) before every republish, even a metadata-only change like a price update.
 
 **Do not repeatedly publish while debugging.** Preserve the marketplace output and the signed receipt evidence. This step requires explicit sign-off — confirm before running it, every time.
