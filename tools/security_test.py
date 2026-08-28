@@ -51,7 +51,11 @@ def main() -> int:
     h.__rc_helpers__ = {"vault_get": lambda provider: TEST_NOTION_TOKEN}
     assert h._load_api_key() == TEST_NOTION_TOKEN
     assert h._extract_api_key({"fields": {"NOTION_API_KEY": " key "}}) == "key"
-    print("PASS: vault_get supplies string and documented field shapes")
+    # RailCall Station's credential_resolver.resolve() returns the bare
+    # fields dict directly for named credentials saved through Studio
+    # Integrations (no "fields" wrapper) - this must also resolve.
+    assert h._extract_api_key({"NOTION_API_KEY": " key2 "}) == "key2"
+    print("PASS: vault_get supplies string, wrapped-fields, and bare-fields shapes")
 
     h.__rc_helpers__ = {"vault_get": lambda provider: None}
     expect_runtime_error(h._load_api_key, "not configured")
