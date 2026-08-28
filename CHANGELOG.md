@@ -6,6 +6,7 @@ Real changes since the 1.0.0 initial commit (not yet a new tagged version — `m
 
 ### Changed
 
+- `EVIDENCE_CHECKLIST.md` tightened to name exact receipt field values to capture (`result_status`, `execution_class`, `external_api_touched`, `http_status`, `signature.sig`, `loaded=1 rejected=0`) instead of describing them loosely.
 - `docs/TROUBLESHOOTING.md` expanded from 6 to 11 entries: added `No module named certifi`, `CERTIFICATE_VERIFY_FAILED`, `blocked_by_policy` (including the read-command-upgrade case root-caused earlier in this project), approved-action-does-not-execute (payload-hash binding), and rate-limit guidance.
 
 ### Fixed

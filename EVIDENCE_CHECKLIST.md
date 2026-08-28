@@ -3,10 +3,10 @@
 ## Strongest evidence set
 
 1. **Real Notion result** — show a harmless approved page update or comment on a test page.
-2. **Module loaded** — Notion Guard `v1.0.0`, signature verified, 10 commands, 0 rejected.
-3. **Blocked before approval** — a write preview that is not yet executed.
-4. **Approved execution** — executed card showing HTTP 200 and a signature present.
-5. **Independent receipt verification** — successful verification for the executed write.
+2. **Module loaded** — Studio's Modules tab or boot log showing Notion Guard `v1.0.0`, signature verified, 10 commands, `loaded=1 rejected=0`.
+3. **Blocked before approval** — a receipt showing `"result_status": "blocked_by_policy"`, `"execution_class": "blocked"`, and `"external_api_touched": false`.
+4. **Approved execution** — a receipt showing `"result_status": "executed"`, `"http_status": 200`, and a non-null `signature.sig`.
+5. **Independent receipt verification** — `tools/verify_module_tree.py` and/or `railcall market module verify` reporting `✓ signature valid` for the executed write's receipt.
 6. **Safe smoke test** — all six reads and all four write previews pass; no write approved or executed.
 7. **Public marketplace listing** — creator, version, 10 commands, governance posture.
 8. **Review acknowledgement/approval** — RailCall message or dashboard status.
