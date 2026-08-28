@@ -97,6 +97,19 @@ def test_simplify_helpers(h) -> None:
           "_simplify_block)")
 
 
+def test_extract_error_message(h) -> None:
+    assert h._extract_error_message(
+        '{"message": "bad request", "code": "validation_error"}'
+    ) == "bad request [validation_error]"
+    assert h._extract_error_message('{"message": "bad request"}') == "bad request"
+    long_message = "x" * 500
+    capped = h._extract_error_message(
+        json.dumps({"message": long_message, "code": "validation_error"})
+    )
+    assert len(capped) == 300
+    print("PASS: _extract_error_message (code surfaced alongside message, still capped at 300)")
+
+
 def test_notion_search(h) -> None:
     def fake_request(method, path, api_key, body=None, query=None, is_write=False):
         assert method == "POST" and path == "/search"
@@ -422,6 +435,7 @@ def test_create_comment(h) -> None:
 def main() -> int:
     h = load_handler()
     test_simplify_helpers(h)
+    test_extract_error_message(h)
     test_notion_search(h)
     test_get_data_source_schema(h)
     test_query_data_source(h)
