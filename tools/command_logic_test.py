@@ -408,6 +408,41 @@ def test_append_blocks(h) -> None:
     print("PASS: notion_append_blocks (default position, response simplification, 100-block cap)")
 
 
+def test_require_id_validation(h) -> None:
+    def must_reject(value, expected_fragment):
+        try:
+            h._require_id(value, "page_id")
+            raise AssertionError(f"expected rejection for {value!r}")
+        except RuntimeError as exc:
+            assert expected_fragment in str(exc), f"{value!r} -> {exc}"
+
+    for bad in ("abc\r\nX-Injected: evil", "abc def", "abc\x00def", "abc\tdef"):
+        must_reject(bad, "control character or space")
+    for bad in ("../../v1/users", "abc/def", "abc\\def", "/etc/passwd"):
+        must_reject(bad, "path separator")
+    assert h._require_id("1f2e3d4c-5b6a-7980-9c8d-0e1f2a3b4c5d", "page_id") == (
+        "1f2e3d4c-5b6a-7980-9c8d-0e1f2a3b4c5d"
+    )
+
+    def poisoned_request(*args, **kwargs):
+        raise AssertionError("must not reach the network for an invalid id")
+
+    h._request = poisoned_request
+    for field, bad_inputs in (
+        ("page_id", {"page_id": "abc\r\nX-Injected: evil"}),
+        ("block_id", {"block_id": "../../v1/users"}),
+    ):
+        try:
+            h.notion_get_page(bad_inputs, None) if field == "page_id" else h.notion_append_blocks(
+                {**bad_inputs, "children_json": "[{}]"}, None
+            )
+            raise AssertionError(f"expected {field} rejection before any network call")
+        except RuntimeError:
+            pass
+    print("PASS: _require_id (control characters, path separators rejected; valid ids pass; "
+          "commands reject bad ids before any network attempt)")
+
+
 def test_create_comment(h) -> None:
     def fake_request(method, path, api_key, body=None, query=None, is_write=False):
         assert method == "POST" and path == "/comments" and is_write is True
@@ -441,6 +476,7 @@ def main() -> int:
     test_query_data_source(h)
     test_get_page(h)
     test_get_page_content(h)
+    test_require_id_validation(h)
     test_list_users(h)
     test_create_page(h)
     test_update_page_properties(h)
