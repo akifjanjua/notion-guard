@@ -4,6 +4,10 @@
 
 Real changes since the 1.0.0 initial commit (not yet a new tagged version — `module.json` still reads `1.0.0`). Every entry below was committed, offline-tested, re-signed with the real registered publisher key, independently re-verified (both this repo's own `tools/verify_module_tree.py` and RailCall's own `railcall market module verify`), and confirmed green on CI before merging.
 
+### Changed
+
+- `docs/TROUBLESHOOTING.md` expanded from 6 to 11 entries: added `No module named certifi`, `CERTIFICATE_VERIFY_FAILED`, `blocked_by_policy` (including the read-command-upgrade case root-caused earlier in this project), approved-action-does-not-execute (payload-hash binding), and rate-limit guidance.
+
 ### Fixed
 
 - HTTP 429 (rate limited) fell through to the generic "Notion API returned HTTP 429: ..." message. Now detected explicitly and raises a clear rate-limit message instead.
