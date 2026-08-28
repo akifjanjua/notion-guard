@@ -12,10 +12,10 @@ Guessing a property name or a select option wrong produces a failed or malformed
 
 ## Governance posture
 
-Every write is `write_requires_approval`. RailCall shows the exact payload before anything executes, and a signed, independently verifiable receipt records what happened. The signed manifest declares `allowed_destinations: []` — zero LLM/model-provider egress. Credentials are vault-only; there is no environment-variable or credential-file fallback.
+Every write is `write_requires_approval`. RailCall shows the exact payload before anything executes, and a signed, independently verifiable receipt records what happened. The signed manifest declares `allowed_destinations: [{"provider":"notion","hosts":["api.notion.com"]}]` — exactly the Notion API host, zero LLM/model-provider egress. Credentials are vault-only; there is no environment-variable or credential-file fallback.
 
 ## Setup
 
-Create an internal integration at `notion.so/my-integrations`, share the pages/databases you want it to see, and save the integration secret as `NOTION_API_KEY` in RailCall Studio → Integrations → Notion.
+Create an internal integration at `notion.so/my-integrations`, share the pages/databases you want it to see, and save the integration secret as `NOTION_API_KEY` in RailCall Studio → Integrations. Search "notion" — use the `muhammad-akif-janjua-notion-guard::notion` card, not the plain `notion` one (Station auto-namespaces this module's slot because its declared provider collides with Station's built-in Notion integration).
 
 `contest:2026Q3`
