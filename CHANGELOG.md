@@ -4,6 +4,11 @@
 
 Real changes since the 1.0.0 initial commit (not yet a new tagged version — `module.json` still reads `1.0.0`). Every entry below was committed, offline-tested, re-signed with the real registered publisher key, independently re-verified (both this repo's own `tools/verify_module_tree.py` and RailCall's own `railcall market module verify`), and confirmed green on CI before merging.
 
+### Added
+
+- `docs/TROUBLESHOOTING.md` gained two new entries documenting real limitations found during a deeper adversarial/idempotency pass: retrying `create_page`/`append_blocks`/`create_comment` after an "outcome is unknown" error can create a duplicate, because Notion's REST API has no client-supplied idempotency key for these endpoints (`update_page_properties` is naturally safe from this, since re-applying the same values is idempotent); and two concurrent `update_page_properties` calls setting the same property on the same page race with silent last-write-wins, since Notion's API has no optimistic-concurrency support. Both are Notion API limitations, not something Notion Guard can detect or prevent. README's Limitations section gained a one-sentence cross-reference to the same effect.
+- `docs/TROUBLESHOOTING.md` gained an entry for `_require_id`'s validation error messages (control character/space, path separator, non-ASCII), explaining that an ID field must be the bare Notion ID, not a full URL.
+
 ### Fixed
 
 - `_require_id`'s control-character check only covered the ASCII range (`\x00-\x20\x7f`), matching the specific finding from the last adversarial pass but not the underlying constraint: HTTP request lines must be pure ASCII, period. A non-ASCII character in an ID field (a Unicode line separator, an RTL override, an accented letter, an emoji) crashed the same way a raw `\r\n` used to, just via `UnicodeEncodeError` instead of `http.client.InvalidURL` — a different exception type, still uncaught. `_require_id` now rejects anything outside ASCII up front, before the more specific control-character/path-separator checks. Verified with a real (unmocked) call that previously crashed with `UnicodeEncodeError: 'ascii' codec can't encode character...`.

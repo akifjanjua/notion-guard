@@ -57,6 +57,6 @@ Preview `notion.create_page` with a `data_source_id` (from `notion.search`; conf
 
 ## Limitations
 
-The integration token acts with whatever pages/databases a workspace admin has explicitly shared with it — Notion Guard cannot see anything that has not been shared. Search, query, and content results are bounded to remain readable in RailCall receipts.
+The integration token acts with whatever pages/databases a workspace admin has explicitly shared with it — Notion Guard cannot see anything that has not been shared. Search, query, and content results are bounded to remain readable in RailCall receipts. Retrying `create_page`/`append_blocks`/`create_comment` after an unknown-outcome error can duplicate them; concurrent same-property writes race — see [Troubleshooting](docs/TROUBLESHOOTING.md).
 
 `contest:2026Q3`

@@ -14,11 +14,17 @@
 
 **"the write outcome is unknown"** — The request either timed out, the connection failed, or Notion returned a server error (5xx) after the request was sent. Check the target page/database directly in Notion before retrying; the write may or may not have applied.
 
-**"Notion API rate limit reached"** — Wait before retrying. Notion Guard never automatically retries a request. Narrow searches/queries and reuse IDs you've already discovered instead of re-querying broadly.
+**Retrying after "the write outcome is unknown" can create a duplicate** — Notion's REST API has no client-supplied idempotency key for `notion.create_page`, `notion.append_blocks`, or `notion.create_comment`. If the original request actually succeeded on Notion's side despite the timeout/5xx, retrying one of these three creates a second page, a second set of blocks, or a second comment — check Notion first. `notion.update_page_properties` doesn't have this risk: re-applying the same property values (or the same `in_trash` boolean) is idempotent, so retrying it is safe.
+
+**Two writes to the same property on the same page can silently overwrite each other** — Notion's API has no optimistic-concurrency support (no ETags, no conditional writes). If two `notion.update_page_properties` calls both set the same property on the same page close together, whichever request reaches Notion's servers last wins — neither caller is told a conflict occurred. This is a Notion API limitation Notion Guard cannot detect or prevent; avoid concurrent edits to the same field from two places at once.
+
+**"Notion API rate limit reached"** — Wait before retrying (the message includes Notion's own `Retry-After` value in seconds when Notion supplies one). Notion Guard never automatically retries a request. Narrow searches/queries and reuse IDs you've already discovered instead of re-querying broadly.
 
 **`children_json` or `properties_json` errors about invalid JSON** — These fields must be a JSON-encoded string containing Notion's exact documented shape (e.g. `{"Name":{"title":[{"text":{"content":"..."}}]}}`), not a plain string or a Python dict literal.
 
 **`page_id` vs `data_source_id`** — A database in Notion's current API is a container for one or more data sources; pages are created under a `data_source_id`, not a `database_id`. Use `notion.search` with `object_type: "data_source"`, or pass a `database_id` directly to `notion.get_data_source_schema` to resolve it.
+
+**"... is not a valid Notion ID" (control character, space, path separator, or non-ASCII character)** — An ID field (`page_id`, `block_id`, `data_source_id`, `database_id`, `parent_id`) must be the bare Notion ID itself — a 32-character hex string, with or without dashes — not a full Notion URL and not text with stray whitespace. If you copied an ID from a page's "Copy link" URL, strip everything except the ID segment at the end of the path.
 
 **`No module named certifi`** — Install certifi with the same Python RailCall uses:
 
