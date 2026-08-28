@@ -9,6 +9,7 @@ write command.
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import sys
 import urllib.error
@@ -17,20 +18,42 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_ENDPOINT = "http://127.0.0.1:8799"
+DEFAULT_WORKSPACE = Path.home() / ".railcall" / "station" / ".railcall_workspace"
 
 
 class SmokeFailure(RuntimeError):
     pass
 
 
-def call(endpoint: str, route: str, payload: dict[str, Any]) -> dict[str, Any]:
+def _discover_session_token(workspace: Path) -> str:
+    """Same discovery order RailCall's own MCP server uses in
+    mcp_server.py's _station_execute_command: try the CLI-specific token
+    first, then the main per-startup session token. Both are same-user,
+    0600 local files under the workspace directory Studio was started with."""
+    for name in ("cli_session_token", "session_token"):
+        path = workspace / name
+        try:
+            token = path.read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+        if token:
+            return token
+    raise SmokeFailure(
+        f"No session token found under {workspace}. Is RailCall Studio running? "
+        "Pass --session-token or --workspace to point at the right instance."
+    )
+
+
+def call(
+    endpoint: str, route: str, payload: dict[str, Any], session_token: str
+) -> dict[str, Any]:
     request = urllib.request.Request(
         endpoint.rstrip("/") + route,
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "Content-Type": "application/json",
             "Origin": endpoint.rstrip("/"),
-            "Referer": endpoint.rstrip("/") + "/v2",
+            "X-RailCall-Session": session_token,
         },
         method="POST",
     )
@@ -47,7 +70,9 @@ def call(endpoint: str, route: str, payload: dict[str, Any]) -> dict[str, Any]:
         raise SmokeFailure(f"RailCall returned invalid JSON from {route}") from exc
 
 
-def execute(endpoint: str, command_id: str, inputs: dict[str, Any]) -> dict[str, Any]:
+def execute(
+    endpoint: str, command_id: str, inputs: dict[str, Any], session_token: str
+) -> dict[str, Any]:
     return call(
         endpoint,
         "/api/commands/execute",
@@ -56,10 +81,13 @@ def execute(endpoint: str, command_id: str, inputs: dict[str, Any]) -> dict[str,
             "inputs": inputs,
             "intent": f"Notion Guard smoke test: {command_id}",
         },
+        session_token,
     )
 
 
-def preview(endpoint: str, command_id: str, inputs: dict[str, Any]) -> dict[str, Any]:
+def preview(
+    endpoint: str, command_id: str, inputs: dict[str, Any], session_token: str
+) -> dict[str, Any]:
     return call(
         endpoint,
         "/api/commands/preview",
@@ -68,6 +96,7 @@ def preview(endpoint: str, command_id: str, inputs: dict[str, Any]) -> dict[str,
             "inputs": inputs,
             "intent": f"Notion Guard safe preview: {command_id}",
         },
+        session_token,
     )
 
 
@@ -110,11 +139,25 @@ def main() -> int:
     parser.add_argument("--endpoint", default=DEFAULT_ENDPOINT)
     parser.add_argument("--search", default="")
     parser.add_argument(
+        "--workspace",
+        default=str(DEFAULT_WORKSPACE),
+        help="RailCall Studio workspace dir (.railcall_workspace) to read the session token from.",
+    )
+    parser.add_argument(
+        "--session-token",
+        default=None,
+        help="Session token to send as X-RailCall-Session. Auto-discovered from --workspace if omitted.",
+    )
+    parser.add_argument(
         "--report",
         default="notion-guard-smoke-report.json",
         help="Path for the redacted JSON report.",
     )
     args = parser.parse_args()
+
+    session_token = args.session_token or _discover_session_token(Path(args.workspace))
+    execute = functools.partial(globals()["execute"], session_token=session_token)
+    preview = functools.partial(globals()["preview"], session_token=session_token)
 
     report: dict[str, Any] = {
         "endpoint": args.endpoint,
