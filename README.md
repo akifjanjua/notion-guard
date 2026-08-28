@@ -6,42 +6,54 @@ Notion Guard is a governance-first RailCall module for small teams running their
 
 ## Commands
 
-Reads: `notion.search`, `notion.get_data_source_schema`, `notion.query_data_source`, `notion.get_page`, `notion.get_page_content`, and `notion.list_users`. These execute immediately — they cannot alter workspace state, so gating them would only add friction.
+Reads: `notion.search`, `notion.get_data_source_schema`, `notion.query_data_source`, `notion.get_page`, `notion.get_page_content`, and `notion.list_users`. By default these execute immediately since they cannot alter workspace state — but a Station-wide policy (`a2d3bf`) can upgrade every command from a module declaring network access to require approval, reads included. If a read shows `blocked_by_policy`, see [Troubleshooting](docs/TROUBLESHOOTING.md).
 
-Writes: `notion.create_page`, `notion.update_page_properties`, `notion.append_blocks`, and `notion.create_comment`. Every write uses `write_requires_approval`, so RailCall binds human approval to the exact payload and produces a signed receipt. `notion.update_page_properties` also archives/restores a page via its `in_trash` field — it's still previewed and gated like every other write, but worth knowing that command name covers deletion, not just edits.
+Writes: `notion.create_page`, `notion.update_page_properties`, `notion.append_blocks`, and `notion.create_comment`. Every write uses `write_requires_approval`, binding human approval to the exact payload with a signed receipt. `notion.update_page_properties` also archives/restores a page via its `in_trash` field — same command, not a separate delete.
 
-`notion.get_data_source_schema` and `notion.list_users` exist for usability, not coverage: the schema command lets a caller confirm real property names and select/status option values before writing, instead of guessing whether a field is "Status" or "Task Status"; `list_users` lets people be addressed by name instead of raw UUIDs when setting an assignee.
+`notion.get_data_source_schema` and `notion.list_users` exist for usability: confirm real property names/options before writing, and address teammates by name instead of raw UUIDs. All 10 commands act on one item at a time by design, matching this round's focused command-set scope rather than adding batch variants.
 
 ## Egress contract
 
-The signed manifest declares `"allowed_destinations": [{"provider":"notion","hosts":["api.notion.com"]}]` — exactly the Notion API host, **zero LLM/model-provider destinations**. It does not call Anthropic, OpenAI, Groq, Gemini, xAI, or Ollama, and does not invoke RailCall's model-completion primitive. A `requires` block (`network: ["api.notion.com"]`, `subprocess: false`, `filesystem_writes: []`) has Station enforce the same posture at handler-load time, not just document it. CI fails if model-provider SDKs, provider hosts, or `station_llm` usage are introduced.
+The signed manifest declares `allowed_destinations: [{"provider":"notion","hosts":["api.notion.com"]}]` — the Notion API host only, zero LLM/model-provider destinations. A `requires` block has Station enforce this at handler-load time, not just document it. See [SECURITY.md](SECURITY.md) for the full posture.
 
 ## Install
 
+Pre-publish (current state):
+
 ```bash
 python -m pip install certifi
+git clone https://github.com/akifjanjua/notion-guard.git
+```
+
+Copy the cloned folder's contents into `~/.railcall/station/modules/muhammad-akif-janjua-notion-guard/` (the folder name is the module slug). Open RailCall Studio, reload **Modules**, and confirm **Notion Guard v1.0.0**, **signature verified**, **10 commands**.
+
+Post-publish, this will work instead:
+
+```bash
 railcall market install muhammad-akif-janjua/notion-guard
 ```
 
-Open RailCall Studio, reload **Modules**, and confirm **Notion Guard v1.0.0**, **signature verified**, and **10 commands**.
-
-The release archive is built from immutable Git `HEAD` bytes, reproduces byte-for-byte across checkouts, includes an external per-file SHA-256 manifest, and must pass independent plus official RailCall signature verification after extraction.
-
 ## Configure credentials
 
-Create an internal integration at `https://www.notion.so/my-integrations` and share the pages/databases you want Notion Guard to see with it.
+Create an internal integration at `https://www.notion.so/my-integrations`, then share each page/database you want Notion Guard to see: open it, click **···** top right, **Connections**, add the integration.
 
-In RailCall Studio → **Integrations**, search "notion" — you'll see **two** cards. Notion Guard's credential is **not** the plain `notion` card (that's Station's own built-in integration); because this module's declared provider collides with it, Station auto-namespaces the real slot to `muhammad-akif-janjua-notion-guard::notion`. Use that card's "Add credential" form and save the secret as `NOTION_API_KEY`. Credentials are resolved only through `vault_get("notion")`, which this module's per-module vault shim transparently routes to the namespaced slot.
+In Studio → **Integrations**, search "notion" — you'll see two cards. Use `muhammad-akif-janjua-notion-guard::notion` (Station auto-namespaces this module's slot because its declared provider collides with Station's built-in `notion` card), not the plain one. Save the secret as `NOTION_API_KEY`.
+
+## Run a command
+
+Open Studio's **Sends** tab (`#/sends?module=notion`), pick a Notion Guard command, click **Fire**, fill its inputs, then **1. Preview → 2. Approve → 3. Execute**. Reads and writes both produce a signed receipt; writes additionally pause for your approval click before Notion is touched.
 
 ## Governed write example
 
-Preview `notion.create_page` with a `data_source_id` (found via `notion.search`, confirm field names with `notion.get_data_source_schema` first) and:
+Preview `notion.create_page` with a `data_source_id` (from `notion.search`; confirm field names with `notion.get_data_source_schema` first) and:
 
 ```json
-{
-  "properties_json": "{\"Name\":{\"title\":[{\"text\":{\"content\":\"Ship the RailCall demo\"}}]},\"Status\":{\"select\":{\"name\":\"In Progress\"}}}"
-}
+{"properties_json": "{\"Name\":{\"title\":[{\"text\":{\"content\":\"Ship the RailCall demo\"}}]},\"Status\":{\"select\":{\"name\":\"In Progress\"}}}"}
 ```
+
+## Writing less obvious property types
+
+`get_data_source_schema` reports a property's type and, for select/status/multi_select, its option names — but not every type's write shape. Common ones: `people`: `{"people":[{"id":"<id from notion.list_users>"}]}`; `relation`: `{"relation":[{"id":"<related page id>"}]}`; `date`: `{"date":{"start":"2026-01-01","end":null}}`.
 
 ## Limitations
 
