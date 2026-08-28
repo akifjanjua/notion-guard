@@ -22,6 +22,7 @@ Real changes since the 1.0.0 initial commit (not yet a new tagged version — `m
 ### Added
 
 - `notion.get_page_content` now accepts an optional `block_id` input in addition to `page_id` (previously present in the handler but dead — `module.json`'s schema never declared it, so Studio could never pass it). Notion's underlying endpoint reads children from any block, not just a page's top level, so this is real added capability: reading a specific nested block's (e.g. a toggle's) children using an id returned by an earlier call to this same command.
+- `notion.get_data_source_schema` now also accepts `database_id` (e.g. copied straight from a Notion database URL) as an alternative to `data_source_id`, resolving it via `GET /v1/databases/{id}`. Previously the only way to reach a data source at all was `notion.search` by title-text match — real friction hit live while building the end-to-end evidence for this module. A database with more than one data source raises a clear error listing them instead of silently guessing.
 
 ## 1.0.0
 
