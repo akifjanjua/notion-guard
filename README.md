@@ -8,7 +8,7 @@ Notion Guard is a governance-first RailCall module for small teams running their
 
 Reads: `notion.search`, `notion.get_data_source_schema`, `notion.query_data_source`, `notion.get_page`, `notion.get_page_content`, and `notion.list_users`. These execute immediately — they cannot alter workspace state, so gating them would only add friction.
 
-Writes: `notion.create_page`, `notion.update_page_properties`, `notion.append_blocks`, and `notion.create_comment`. Every write uses `write_requires_approval`, so RailCall binds human approval to the exact payload and produces a signed receipt.
+Writes: `notion.create_page`, `notion.update_page_properties`, `notion.append_blocks`, and `notion.create_comment`. Every write uses `write_requires_approval`, so RailCall binds human approval to the exact payload and produces a signed receipt. `notion.update_page_properties` also archives/restores a page via its `in_trash` field — it's still previewed and gated like every other write, but worth knowing that command name covers deletion, not just edits.
 
 `notion.get_data_source_schema` and `notion.list_users` exist for usability, not coverage: the schema command lets a caller confirm real property names and select/status option values before writing, instead of guessing whether a field is "Status" or "Task Status"; `list_users` lets people be addressed by name instead of raw UUIDs when setting an assignee.
 

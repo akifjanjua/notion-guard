@@ -24,6 +24,8 @@ All Notion requests use Python `urllib.request` with certificate and hostname ve
 
 All four writes — `notion.create_page`, `notion.update_page_properties`, `notion.append_blocks`, and `notion.create_comment` — are `write_requires_approval`. RailCall binds approval to the exact previewed payload. Without matching approval, the external write is blocked.
 
+**Trust surface note:** `notion.update_page_properties` is also the module's delete-adjacent command — setting `in_trash: true` archives a page (Notion's trash, restorable via `in_trash: false`), and `in_trash` can be set in the same call as a `properties_json` edit. It carries no separate command name or higher risk tier than an ordinary property edit, so a reviewer scanning command names for "what can remove content" should know this one covers it. Approval preview always shows the exact `in_trash` value being set, so an operator approving a plain-looking property update can see if it also archives the page.
+
 Complex payloads (property values, block arrays, filters, sorts) are passed as JSON-string fields so a write expresses Notion's exact documented shape rather than a lossy intermediate format, and can be inspected in full during approval.
 
 ## Retry and unknown-outcome policy
