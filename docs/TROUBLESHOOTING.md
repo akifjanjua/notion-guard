@@ -1,6 +1,8 @@
 # Troubleshooting
 
-**"Notion credential is not configured"** — Save your integration secret as `NOTION_API_KEY` in RailCall Studio → Integrations → Notion, then reload Modules.
+**Saved a token in Integrations, but Notion Guard still says "not configured"** — Search Integrations for "notion"; you'll see two cards. The plain `notion` card is Station's own built-in integration, not this module's. Because this module's provider collides with it, RailCall auto-namespaces the real credential slot to `muhammad-akif-janjua-notion-guard::notion` — save `NOTION_API_KEY` on that card instead.
+
+**"Notion credential is not configured"** — Save your integration secret as `NOTION_API_KEY` on the `muhammad-akif-janjua-notion-guard::notion` card in RailCall Studio → Integrations (see above — not the plain `notion` card), then reload Modules.
 
 **A page/database doesn't show up in `notion.search`** — Notion integrations only see content a workspace admin has explicitly shared with them. Open the page or database in Notion, click "..." → "Connections", and add the integration.
 

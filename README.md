@@ -29,7 +29,9 @@ The release archive is built from immutable Git `HEAD` bytes, reproduces byte-fo
 
 ## Configure credentials
 
-Create an internal integration at `https://www.notion.so/my-integrations` and share the pages/databases you want Notion Guard to see with it. In **RailCall Studio → Integrations → Notion**, save the integration secret as `NOTION_API_KEY`. Credentials are resolved only through `vault_get("notion")`.
+Create an internal integration at `https://www.notion.so/my-integrations` and share the pages/databases you want Notion Guard to see with it.
+
+In RailCall Studio → **Integrations**, search "notion" — you'll see **two** cards. Notion Guard's credential is **not** the plain `notion` card (that's Station's own built-in integration); because this module's declared provider collides with it, Station auto-namespaces the real slot to `muhammad-akif-janjua-notion-guard::notion`. Use that card's "Add credential" form and save the secret as `NOTION_API_KEY`. Credentials are resolved only through `vault_get("notion")`, which this module's per-module vault shim transparently routes to the namespaced slot.
 
 ## Governed write example
 

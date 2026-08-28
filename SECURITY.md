@@ -4,6 +4,8 @@
 
 Notion Guard resolves `NOTION_API_KEY` exclusively through RailCall's injected `vault_get("notion")` helper. It does not inspect `credentials.local.json`, other RailCall files, process environment variables, command-line arguments, or command inputs for secrets.
 
+Because this module's declared provider (`notion`) collides with Station's own built-in Notion integration, RailCall auto-namespaces the actual vault slot to `muhammad-akif-janjua-notion-guard::notion` (a distinct card from the plain `notion` one in Studio's Integrations page). The handler's `vault_get("notion")` call is unaffected — RailCall's per-module vault shim transparently routes it to the namespaced slot — but an operator saving the credential in Studio must use the namespaced card, not the plain `notion` one, or the module will report the credential as not configured. See `README.md` → Configure credentials.
+
 Never publish API keys, approval codes, local receipt archives, `.env` files, or RailCall credential files.
 
 ## HTTPS transport
