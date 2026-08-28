@@ -6,6 +6,7 @@ Real changes since the 1.0.0 initial commit (not yet a new tagged version — `m
 
 ### Fixed
 
+- `module.json`'s top-level `category` was `"Docs & Workspace"`, which is not one of the marketplace's accepted values (`Data, Eng, Finance, HR/IT, Marketing, Ops, Revenue, Risk, Success, Support, Governance, Prompts, CRM, Modules`) — the accepted enum isn't documented anywhere in the schema or CLI help, so this only surfaced as a real HTTP 400 from `railcall market publish`. Changed to `"Governance"`, matching the module's own governance-first positioning. `credential_spec.category` (a separate, freeform field describing the credential's domain, not the marketplace listing category) is unaffected and stays `"Docs & Workspace"`.
 - `MARKETPLACE_LISTING.md` — the actual storefront listing copy — was never updated during any prior fix round and had drifted from the rest of the docs on two facts: it claimed the signed manifest declares `allowed_destinations: []`, when the real, current manifest declares `[{"provider":"notion","hosts":["api.notion.com"]}]` (restructured earlier in this Unreleased section, but this file was missed); and its setup instructions pointed installers at the plain `notion` Integrations card, the exact wrong-card mistake already found, fixed, and documented in README.md/SECURITY.md/`docs/TROUBLESHOOTING.md`. Found via a direct file-by-file honest-scoring pass against a storefront-depth rubric. Both now match the real manifest and the namespaced `muhammad-akif-janjua-notion-guard::notion` card.
 
 ### Changed
