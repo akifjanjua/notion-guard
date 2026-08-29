@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+`CONTEST_SUBMISSION.md` updated with a fresh end-to-end verification pass on v1.0.3 (free): real `notion.search` and `notion.create_page` executions through Studio's Sends tab, receipts `cmd_20260829T012119Z_notion_search_4398ede7_executed_0003.json` and `cmd_20260829T012240Z_notion_create_page_30a11898_executed_0006.json`, both `http_status: 200`, page "Notion Guard v1.0.3 free reversion test" confirmed live in the Test Tasks database. The prior paid-period receipts are kept as historical context, explicitly marked as superseded. Also refreshed the repo HEAD hash, the CI run link, and the marketplace-listing paragraph to describe the confirmed free-listing display (full "10 AIRLOCK COMMANDS" breakdown, `Provenance: commands 10`) in place of the paid-period `commands —`/metadata-only description.
+
 ## 1.0.3
 
 Reverted the pricing decision — Notion Guard is free again, like Linear Guard. `license_required` set back to `false`, republished with `--price=0` (explicit, not omitted — `price_cents` has no preserve-on-omit fallback). Version bumped to 1.0.3 (the marketplace requires a strictly-increasing version on every republish, price-only changes included).
