@@ -1,5 +1,7 @@
 # Troubleshooting
 
+**Notion Guard's commands don't show up at all, or the Modules tab shows a `license:` rejection reason** — Notion Guard is a paid module (`license_required: true`); Station won't register its commands without a valid license file for this install. After purchase, run `railcall market auto-claim` to fetch and install one automatically (no manual purchase ID needed). The manual alternative, `railcall market claim <purchase_id>`, needs a purchase ID from your marketplace dashboard (`railcall.ai/marketplace/dashboard`) — not from `railcall market purchases`, which the CLI's own `--help` text mentions but doesn't actually exist as a command. Reload Modules after claiming.
+
 **Saved a token in Integrations, but Notion Guard still says "not configured"** — Search Integrations for "notion"; you'll see two cards. The plain `notion` card is Station's own built-in integration, not this module's. Because this module's provider collides with it, RailCall auto-namespaces the real credential slot to `muhammad-akif-janjua-notion-guard::notion` — save `NOTION_API_KEY` on that card instead.
 
 **"Notion credential is not configured"** — Save your integration secret as `NOTION_API_KEY` on the `muhammad-akif-janjua-notion-guard::notion` card in RailCall Studio → Integrations (see above — not the plain `notion` card), then reload Modules.

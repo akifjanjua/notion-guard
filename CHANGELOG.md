@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.2
+
+`module.json`'s `license_required` was still `false` after Notion Guard was priced at $69 on the marketplace, meaning Station's local module loader (`routes/modules.py`) treated it exactly like a free module — the "Free modules skip this branch entirely" comment on the license-check block applied to it. Since the GitHub repo is public and contains the complete `module.json` + `handlers/handler.py` + `module.sig`, anyone could copy those three files into their own Station's `modules/` directory and use all 10 commands fully, for free, with zero payment enforcement; the price only gated the marketplace's own hosted download path. Found a real precedent for the correct pattern in `station/docs/spec-zernio-module.md`, documenting a real $160/month paid module: `license_required: true`, "same pattern as the paid Salesforce module." Set `license_required: true` to match. No handler.py changes were needed or made — the entire enforcement (license file storage, Ed25519 verification against RailCall's pinned issuer key, periodic server-trust re-checks) lives in Station's own `module_entitlement.py`, gated purely by this one manifest flag; confirmed by reading that module directly rather than guessing at its shape.
+
+Consequence, documented in `PUBLISH_CHECKLIST.md`: every Station install, including the publisher's own dev/test station, now needs a valid license file for this module to load its commands — there is no publisher exemption anywhere in the check. Local testing after this point requires a real purchase + `railcall market claim`/`railcall market auto-claim`.
+
+Version bumped to 1.0.2 (the marketplace requires a strictly-increasing version to accept any republish, discovered when setting the price in 1.0.1).
+
+### Added
+
+- `README.md` gained an "After purchase" note under Install, and `docs/TROUBLESHOOTING.md` gained a first entry (ahead of the credential entries, since it's the first thing a buyer would hit) documenting `railcall market auto-claim` as the preferred, lower-friction path to unlock a purchased module's commands, with `railcall market claim <purchase_id>` documented as the manual fallback. Both explicitly note that the CLI's own `--help` text for `market claim` points at a `railcall market purchases` subcommand that doesn't actually exist, so as not to repeat that mistake in our own docs — the real purchase id source is the marketplace dashboard, or `auto-claim`'s automatic lookup which needs no purchase id at all.
+- `EVIDENCE_CHECKLIST.md`'s "Module loaded" item now notes that a valid license is a prerequisite for that screenshot to show a loaded (not rejected) module, now that the module is license-gated.
+
 ## 1.0.1
 
 Real changes since the 1.0.0 initial commit. Every entry below was committed, offline-tested, re-signed with the real registered publisher key, independently re-verified (both this repo's own `tools/verify_module_tree.py` and RailCall's own `railcall market module verify`), and confirmed green on CI before merging. Version bumped to 1.0.1 because the marketplace backend requires a strictly-increasing version to accept a republish (discovered when republishing to set a price — `HTTP 409: version "1.0.0" must be strictly greater than the currently published version`).

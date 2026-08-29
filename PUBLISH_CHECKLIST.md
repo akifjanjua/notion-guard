@@ -53,8 +53,8 @@ python tools/release_acceptance_test.py
 Expected assets:
 
 ```text
-dist/notion-guard-v1.0.1.zip
-dist/notion-guard-v1.0.1.files.json
+dist/notion-guard-v1.0.2.zip
+dist/notion-guard-v1.0.2.files.json
 ```
 
 (The version segment tracks `module.json`'s `version` field — update this if it changes again.)
@@ -84,5 +84,7 @@ railcall market publish . --type=module --price=6900
 **`--price=6900` ($69.00) must be included on every republish, with no exceptions.** There is no CLI mechanism to edit a live listing directly — a republish (same `--id`, higher `--version`) is the only way to change anything about it, including price. Unlike `category`, which the marketplace preserves from the current listing when omitted, `price_cents` has no such fallback: it defaults to `0` (free) every time `--price` isn't passed. Forgetting this flag on a future republish (e.g. a routine bug-fix bump) silently resets the listing back to free. Confirmed directly in `railcall_cli.py`'s `_market_publish_module`.
 
 **The marketplace also requires a strictly-increasing `version` to accept a republish at all** (`HTTP 409: version "X" must be strictly greater than the currently published version`) — bump `module.json`'s `version` (and this checklist's dist filenames above) before every republish, even a metadata-only change like a price update.
+
+**`license_required: true` means every Station install — including your own dev/test one — now needs a valid license file for this module to load its commands at all.** There is no publisher exemption in Station's loader (`routes/modules.py`) or in `module_entitlement.py` — the check is purely `if manifest.get("license_required")`, with no special case for the signing publisher's own pubkey. Local testing after this point requires either a real purchase + `railcall market claim`/`railcall market auto-claim`, or accepting that the dev station's own copy will show `loaded=0` with a `license:` rejection reason until one is installed.
 
 **Do not repeatedly publish while debugging.** Preserve the marketplace output and the signed receipt evidence. This step requires explicit sign-off — confirm before running it, every time.
