@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.3
+
+Reverted the pricing decision — Notion Guard is free again, like Linear Guard. `license_required` set back to `false`, republished with `--price=0` (explicit, not omitted — `price_cents` has no preserve-on-omit fallback). Version bumped to 1.0.3 (the marketplace requires a strictly-increasing version on every republish, price-only changes included).
+
+Removed the now-unneeded local dev-build split (`notion-guard-local-dev-builds/v1.0.1-DEV-UNLICENSED`, kept outside the repo since the previous round) — with the real module free again, there's no license gate to work around locally, so testing consolidates back to the real repo and a single Station install, same as before that workaround existed.
+
+Reverted the paid-specific documentation added in 1.0.2: README's "After purchase" note, `docs/TROUBLESHOOTING.md`'s license-rejection entry, and `EVIDENCE_CHECKLIST.md`'s license-prerequisite caveat are all removed as inapplicable to a free listing. `PUBLISH_CHECKLIST.md`'s publish command and price-flag guidance now reflect `--price=0` instead of `--price=6900`. `MARKETPLACE_LISTING.md` and `CONTEST_SUBMISSION.md` never referenced price or licensing directly, so neither needed changes.
+
 ## 1.0.2
 
 `module.json`'s `license_required` was still `false` after Notion Guard was priced at $69 on the marketplace, meaning Station's local module loader (`routes/modules.py`) treated it exactly like a free module — the "Free modules skip this branch entirely" comment on the license-check block applied to it. Since the GitHub repo is public and contains the complete `module.json` + `handlers/handler.py` + `module.sig`, anyone could copy those three files into their own Station's `modules/` directory and use all 10 commands fully, for free, with zero payment enforcement; the price only gated the marketplace's own hosted download path. Found a real precedent for the correct pattern in `station/docs/spec-zernio-module.md`, documenting a real $160/month paid module: `license_required: true`, "same pattern as the paid Salesforce module." Set `license_required: true` to match. No handler.py changes were needed or made — the entire enforcement (license file storage, Ed25519 verification against RailCall's pinned issuer key, periodic server-trust re-checks) lives in Station's own `module_entitlement.py`, gated purely by this one manifest flag; confirmed by reading that module directly rather than guessing at its shape.
