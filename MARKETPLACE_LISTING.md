@@ -18,4 +18,8 @@ Every write is `write_requires_approval`. RailCall shows the exact payload befor
 
 Create an internal integration at `notion.so/my-integrations`, share the pages/databases you want it to see, and save the integration secret as `NOTION_API_KEY` in RailCall Studio → Integrations. Search "notion" — use the `muhammad-akif-janjua-notion-guard::notion` card, not the plain `notion` one (Station auto-namespaces this module's slot because its declared provider collides with Station's built-in Notion integration).
 
+## Pricing
+
+$69, one-time purchase (`license_required: true`). Notion Guard's `module.json` description explicitly lists all 10 commands with a one-line purpose each — a workaround RailCall's own team confirmed for a real, permanent-fix-pending platform gap where paid listings don't render the structured command breakdown (`WHAT IT DOES`/`Provenance: commands`) that free listings get; this doesn't fix that widget, but it does put the same information back in front of a buyer before purchase.
+
 `contest:2026Q3`

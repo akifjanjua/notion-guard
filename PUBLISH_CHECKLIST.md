@@ -53,8 +53,8 @@ python tools/release_acceptance_test.py
 Expected assets:
 
 ```text
-dist/notion-guard-v1.0.3.zip
-dist/notion-guard-v1.0.3.files.json
+dist/notion-guard-v1.0.4.zip
+dist/notion-guard-v1.0.4.files.json
 ```
 
 (The version segment tracks `module.json`'s `version` field — update this if it changes again.)
@@ -78,10 +78,14 @@ After merging, update local `main` and repeat steps 3–4 against the merged com
 Publish only from a verified, clean `main` where steps 1–5 above all passed on the latest commit:
 
 ```bash
-railcall market publish . --type=module --price=0
+railcall market publish . --type=module --price=6900
 ```
 
-**Notion Guard is free (`license_required: false`, `price_cents: 0`).** `--price=0` must still be passed explicitly on every republish, not omitted — `price_cents` has no "preserve current value" fallback the way `category` does; it defaults to `0` either way, but pass it explicitly so a future decision to charge again isn't accidentally reverted by an omitted flag reading as "no change" when it actually means "reset to free." Confirmed directly in `railcall_cli.py`'s `_market_publish_module`.
+**Notion Guard is paid again: $69 one-time (`license_required: true`, `price_cents: 6900`).** `--price=6900` must still be passed explicitly on every republish, not omitted — `price_cents` has no "preserve current value" fallback the way `category` does; it defaults to `0` (free) whenever `--price` isn't passed, silently undoing the pricing decision. Confirmed directly in `railcall_cli.py`'s `_market_publish_module`.
+
+**Workaround for the hidden-command-list gap on paid listings**: RailCall's team confirmed paid listings don't render the structured `WHAT IT DOES` command breakdown or `Provenance: commands` count that free listings get (a real platform gap, permanent fix pending) — `commands —` and a "metadata-only" notice show instead, regardless of what the manifest declares. Their short-term fix: list the commands explicitly, by name with a one-line purpose each, directly in `module.json`'s `description` field, since that field renders in the listing's free-text `OVERVIEW` section regardless of paid/free status. Verified live after publishing v1.0.4: the `OVERVIEW` section does show all 10 commands with their purpose; the structured `WHAT IT DOES`/`Provenance` widget still shows metadata-only — the workaround restores the *information* a buyer needs, not the widget itself.
+
+**`description` has a documented 40-2000 character range for a paid listing** (`--description=<file.md>` help text; not enforced for free listings, going by this module's own history at 3050+ chars while free). Confirmed the actual limit is real and enforced via `railcall market publish --dry-run`, which hits the live `/listings/lint` endpoint without publishing — always dry-run a description change before signing and publishing for real, don't just trust the docs number.
 
 **The marketplace also requires a strictly-increasing `version` to accept a republish at all** (`HTTP 409: version "X" must be strictly greater than the currently published version`) — bump `module.json`'s `version` (and this checklist's dist filenames above) before every republish, even a metadata-only change.
 
