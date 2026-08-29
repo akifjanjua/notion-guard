@@ -25,13 +25,15 @@ python -m pip install certifi
 git clone https://github.com/akifjanjua/notion-guard.git
 ```
 
-Copy the cloned folder's contents into `~/.railcall/station/modules/muhammad-akif-janjua-notion-guard/` (the folder name is the module slug). Open RailCall Studio, reload **Modules**, and confirm **Notion Guard v1.0.3**, **signature verified**, **10 commands**.
+Copy the cloned folder's contents into `~/.railcall/station/modules/muhammad-akif-janjua-notion-guard/` (the folder name is the module slug). Open RailCall Studio, reload **Modules**, and confirm **Notion Guard v1.0.4**, **signature verified**, **10 commands**.
 
 Post-publish, this will work instead:
 
 ```bash
 railcall market install muhammad-akif-janjua/notion-guard
 ```
+
+Notion Guard is paid (`license_required: true`). After buying it, run `railcall market auto-claim` to fetch and install your license automatically — no manual purchase ID needed. (The manual `railcall market claim <purchase_id>` needs an ID from your dashboard, not `railcall market purchases` — that command doesn't exist despite the CLI's own `--help` text.) Without a license, commands won't register.
 
 ## Configure credentials
 

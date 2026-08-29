@@ -1,14 +1,24 @@
 # Changelog
 
+## Unreleased
+
+Fixes from an exhaustive regression sweep after the free/paid/free/paid churn (1.0.1 through 1.0.4). Manifest, signature, and CI all passed the sweep clean — every finding below is a documentation drift, not a functional or manifest regression.
+
+- `README.md` and `docs/TROUBLESHOOTING.md` were missing license/purchase/`market claim` guidance — correctly removed during the 1.0.3 free reversion, never restored when 1.0.4 went back to paid, leaving an active buyer-facing gap. Re-added to both, matching the 1.0.2-era wording.
+- `README.md:28` and `EVIDENCE_CHECKLIST.md`'s "Module loaded" item both still named `v1.0.3`; updated to `v1.0.4`.
+- `EVIDENCE_CHECKLIST.md` was also missing its license-prerequisite caveat (same free-reversion gap as above); re-added.
+- Moved a `CHANGELOG.md` paragraph about a `CONTEST_SUBMISSION.md` evidence refresh out of the `## 1.0.4` section into `## 1.0.3`, where it actually belongs — that work happened before the 1.0.4 version bump, describing the module while it was still free at 1.0.3. The paragraph's own content was always accurate; only its section placement was wrong.
+- Corrected an overclaim in the `## 1.0.4` entry below and in `PUBLISH_CHECKLIST.md`: both previously stated the marketplace's documented "40-2000 char" description range was "confirmed... enforced," based on a 1999-character description being accepted. That only tested acceptance *under* 2000 chars. A follow-up adversarial test during the regression sweep found a 2539-character description also passed the real `/listings/lint` endpoint clean — so there is no confirmed enforced ceiling on this field for module-type listings, only a confirmed floor of "well under 2000 is fine." Both docs now say this plainly instead of overclaiming enforcement that was never actually tested.
+- `PUBLISH_CHECKLIST.md` gained a note that `railcall market publish --dry-run` only validates payload/lint shape (via `/listings/lint`) and never checks publish history — a dry-run at an already-published version prints a clean success panel with no warning, even though the real publish would hit the version-conflict `HTTP 409`. Found during the same regression sweep by dry-running at the live v1.0.4.
+- `CONTEST_SUBMISSION.md`'s HEAD hash is one commit behind the real HEAD as of this entry — left as-is, a structural self-reference limitation (the doc can't name the commit that updates it) rather than a fixable mistake.
+
 ## 1.0.4
 
 Reverted back to paid — `license_required: true`, republished with `--price=6900` ($69 one-time). Prompted by RailCall's own team confirming the hidden-command-list issue on paid listings (see the 1.0.3 marketplace-listing note) is a real, permanent-fix-pending platform gap, with a short-term workaround: list the commands explicitly in the module's own description so buyers can see them pre-purchase regardless of the storefront's rendering gap.
 
-Rewrote `module.json`'s `description` field to list all 10 commands by name with a one-line purpose each, trimmed elsewhere to fit the marketplace's documented 40-2000 character range for this field (landed at 1999 characters) — confirmed accepted by the real `/listings/lint` endpoint via `railcall market publish --dry-run` before publishing for real, not just assumed from the docs.
+Rewrote `module.json`'s `description` field to list all 10 commands by name with a one-line purpose each, trimmed elsewhere to land at 1999 characters — under the CLI's own documented "(40..2000 chars)" guidance for the `--description` flag, and confirmed accepted by the real `/listings/lint` endpoint via `railcall market publish --dry-run` before publishing for real. Correction from a later regression sweep: this only confirmed *acceptance under* 2000 chars, not that 2000 is an enforced ceiling — a follow-up test found a 2539-character description also passed `/listings/lint` clean, so there may be no enforced upper bound on this field for module-type listings. See the 1.0.4-regression-sweep entry below for the full finding.
 
 Version bumped to 1.0.4 (the marketplace requires a strictly-increasing version on every republish).
-
-`CONTEST_SUBMISSION.md` updated with a fresh end-to-end verification pass on v1.0.3 (free): real `notion.search` and `notion.create_page` executions through Studio's Sends tab, receipts `cmd_20260829T012119Z_notion_search_4398ede7_executed_0003.json` and `cmd_20260829T012240Z_notion_create_page_30a11898_executed_0006.json`, both `http_status: 200`, page "Notion Guard v1.0.3 free reversion test" confirmed live in the Test Tasks database. The prior paid-period receipts are kept as historical context, explicitly marked as superseded. Also refreshed the repo HEAD hash, the CI run link, and the marketplace-listing paragraph to describe the confirmed free-listing display (full "10 AIRLOCK COMMANDS" breakdown, `Provenance: commands 10`) in place of the paid-period `commands —`/metadata-only description.
 
 ## 1.0.3
 
@@ -17,6 +27,8 @@ Reverted the pricing decision — Notion Guard is free again, like Linear Guard.
 Removed the now-unneeded local dev-build split (`notion-guard-local-dev-builds/v1.0.1-DEV-UNLICENSED`, kept outside the repo since the previous round) — with the real module free again, there's no license gate to work around locally, so testing consolidates back to the real repo and a single Station install, same as before that workaround existed.
 
 Reverted the paid-specific documentation added in 1.0.2: README's "After purchase" note, `docs/TROUBLESHOOTING.md`'s license-rejection entry, and `EVIDENCE_CHECKLIST.md`'s license-prerequisite caveat are all removed as inapplicable to a free listing. `PUBLISH_CHECKLIST.md`'s publish command and price-flag guidance now reflect `--price=0` instead of `--price=6900`. `MARKETPLACE_LISTING.md` and `CONTEST_SUBMISSION.md` never referenced price or licensing directly, so neither needed changes.
+
+`CONTEST_SUBMISSION.md` updated with a fresh end-to-end verification pass on v1.0.3 (free): real `notion.search` and `notion.create_page` executions through Studio's Sends tab, receipts `cmd_20260829T012119Z_notion_search_4398ede7_executed_0003.json` and `cmd_20260829T012240Z_notion_create_page_30a11898_executed_0006.json`, both `http_status: 200`, page "Notion Guard v1.0.3 free reversion test" confirmed live in the Test Tasks database. The prior paid-period receipts are kept as historical context, explicitly marked as superseded. Also refreshed the repo HEAD hash, the CI run link, and the marketplace-listing paragraph to describe the confirmed free-listing display (full "10 AIRLOCK COMMANDS" breakdown, `Provenance: commands 10`) in place of the paid-period `commands —`/metadata-only description.
 
 ## 1.0.2
 
