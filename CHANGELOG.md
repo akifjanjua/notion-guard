@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.0.4
+
+Reverted back to paid — `license_required: true`, republished with `--price=6900` ($69 one-time). Prompted by RailCall's own team confirming the hidden-command-list issue on paid listings (see the 1.0.3 marketplace-listing note) is a real, permanent-fix-pending platform gap, with a short-term workaround: list the commands explicitly in the module's own description so buyers can see them pre-purchase regardless of the storefront's rendering gap.
+
+Rewrote `module.json`'s `description` field to list all 10 commands by name with a one-line purpose each, trimmed elsewhere to fit the marketplace's documented 40-2000 character range for this field (landed at 1999 characters) — confirmed accepted by the real `/listings/lint` endpoint via `railcall market publish --dry-run` before publishing for real, not just assumed from the docs.
+
+Version bumped to 1.0.4 (the marketplace requires a strictly-increasing version on every republish).
 
 `CONTEST_SUBMISSION.md` updated with a fresh end-to-end verification pass on v1.0.3 (free): real `notion.search` and `notion.create_page` executions through Studio's Sends tab, receipts `cmd_20260829T012119Z_notion_search_4398ede7_executed_0003.json` and `cmd_20260829T012240Z_notion_create_page_30a11898_executed_0006.json`, both `http_status: 200`, page "Notion Guard v1.0.3 free reversion test" confirmed live in the Test Tasks database. The prior paid-period receipts are kept as historical context, explicitly marked as superseded. Also refreshed the repo HEAD hash, the CI run link, and the marketplace-listing paragraph to describe the confirmed free-listing display (full "10 AIRLOCK COMMANDS" breakdown, `Provenance: commands 10`) in place of the paid-period `commands —`/metadata-only description.
 
