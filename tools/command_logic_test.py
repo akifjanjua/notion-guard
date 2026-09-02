@@ -431,6 +431,16 @@ def test_require_id_validation(h) -> None:
         must_reject(bad, "control character or space")
     for bad in ("../../v1/users", "abc/def", "abc\\def", "/etc/passwd"):
         must_reject(bad, "path separator")
+    # No length check meant an oversized-but-otherwise-valid id (no control
+    # chars, no slashes, pure ASCII) sailed past every other check, reached
+    # Notion, and got rejected by Cloudflare's edge with a raw HTML 414 page
+    # that _extract_error_message can't parse as JSON - the fallback then
+    # dumped that HTML straight into the RuntimeError message. 500 chars is
+    # generous headroom over a real Notion UUID (~36 chars) and far below
+    # Cloudflare's URI-length limit.
+    must_reject("a" * 501, "too long")
+    must_reject("a" * 2_000_000, "too long")
+    assert h._require_id("a" * 500, "page_id") == "a" * 500
     # The underlying constraint is "HTTP request lines must be pure ASCII", not
     # "no control characters specifically" - a non-ASCII character (NBSP, a
     # Unicode line separator, an RTL override, an emoji, an accented letter)
@@ -457,16 +467,17 @@ def test_require_id_validation(h) -> None:
     for field, bad_inputs in (
         ("page_id", {"page_id": "abc\r\nX-Injected: evil"}),
         ("block_id", {"block_id": "../../v1/users"}),
+        ("oversized page_id", {"page_id": "a" * 2_000_000}),
     ):
         try:
-            h.notion_get_page(bad_inputs, None) if field == "page_id" else h.notion_append_blocks(
+            h.notion_get_page(bad_inputs, None) if "block_id" not in bad_inputs else h.notion_append_blocks(
                 {**bad_inputs, "children_json": "[{}]"}, None
             )
             raise AssertionError(f"expected {field} rejection before any network call")
         except RuntimeError:
             pass
-    print("PASS: _require_id (control characters, path separators rejected; valid ids pass; "
-          "commands reject bad ids before any network attempt)")
+    print("PASS: _require_id (control characters, path separators, oversized ids rejected; "
+          "valid ids pass; commands reject bad ids before any network attempt)")
 
 
 def test_create_comment(h) -> None:
