@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.0.5
+
+Republished with `--price=6900` (explicit, per the standing gotcha) and a bumped version (the marketplace requires strictly-increasing versions on every republish) to ship the fixes below live.
 
 - `_require_id` had no maximum length: a 2-million-character but otherwise "valid" id (pure ASCII, no control characters, no path separators) sailed past every check, reached Notion, and got rejected by Cloudflare's edge with a raw HTML `414 Request-URI Too Large` page — not JSON, so `_extract_error_message` fell back to dumping that HTML (truncated to 300 chars) straight into the `RuntimeError` message. Not a crash and no secret leak, but a confusing, unprofessional error for a case with a trivial fix. `_require_id` now rejects any id over 500 characters — generous headroom over a real Notion UUID (~36 chars), far below Cloudflare's actual limit — with the module's own clean error message instead. `tools/command_logic_test.py` gained boundary tests (500 chars accepted, 501 and 2,000,000 rejected) and confirmed the rejection happens before any network attempt.
 - `module.json`'s `description` had a copy inconsistency: `notion.get_data_source_schema (a data source's property names...)` was missing a leading verb, unlike all 9 other command entries ("search pages...", "read one page's properties...", etc.). Now reads "inspect a data source's property names...". Trimmed "explicitly " from the Limitations sentence to offset the added length; net length actually decreased slightly (1999 → 1996 characters).

@@ -25,7 +25,7 @@ python -m pip install certifi
 git clone https://github.com/akifjanjua/notion-guard.git
 ```
 
-Copy the cloned folder's contents into `~/.railcall/station/modules/muhammad-akif-janjua-notion-guard/` (the folder name is the module slug). Open RailCall Studio, reload **Modules**, and confirm **Notion Guard v1.0.4**, **signature verified**, **10 commands**.
+Copy the cloned folder's contents into `~/.railcall/station/modules/muhammad-akif-janjua-notion-guard/` (the folder name is the module slug). Open RailCall Studio, reload **Modules**, and confirm **Notion Guard v1.0.5**, **signature verified**, **10 commands**.
 
 Post-publish, this will work instead:
 
