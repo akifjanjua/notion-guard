@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `_simplify_rich_text` had no length cap: it backs page/data-source titles, `rich_text` properties, and block text, all of which Notion itself places no practical ceiling on. A read returning up to 50 items (the `page_size` cap) each carrying one or more large rich-text fields could still produce an outsized response even though item count is bounded. Now caps each field at 500 characters, the same defensive idea behind Linear Guard's own per-field truncation for its receipt-safe list responses. `tools/command_logic_test.py` gained a boundary test (a 5,000-character field truncates to exactly 500; a short field passes through unchanged).
+
 ## 1.0.5
 
 Republished with `--price=6900` (explicit, per the standing gotcha) and a bumped version (the marketplace requires strictly-increasing versions on every republish) to ship the fixes below live.
