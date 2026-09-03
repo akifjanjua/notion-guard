@@ -199,6 +199,8 @@ def main() -> int:
             raise _FakeHTTPError(503, b"")
 
         class _FakeResponse:
+            headers = {}
+
             def __enter__(self):
                 return self
 

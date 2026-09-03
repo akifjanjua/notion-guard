@@ -165,7 +165,7 @@ def test_notion_search(h) -> None:
 
 
 def test_get_data_source_schema(h) -> None:
-    def fake_request_direct(method, path, api_key, body=None, query=None, is_write=False):
+    def fake_request_direct(method, path, api_key, body=None, query=None, is_write=False, connection=None):
         assert method == "GET" and path == "/data_sources/ds-1"
         return 200, {
             "id": "ds-1",
@@ -198,8 +198,11 @@ def test_get_data_source_schema(h) -> None:
 
     calls = []
 
-    def fake_request_resolve(method, path, api_key, body=None, query=None, is_write=False):
+    connections_seen = []
+
+    def fake_request_resolve(method, path, api_key, body=None, query=None, is_write=False, connection=None):
         calls.append(path)
+        connections_seen.append(connection)
         if path == "/databases/db-1":
             return 200, {"data_sources": [{"id": "ds-resolved"}]}
         assert path == "/data_sources/ds-resolved"
@@ -209,9 +212,13 @@ def test_get_data_source_schema(h) -> None:
     out, _ = h.notion_get_data_source_schema({"database_id": "db-1"}, None)
     assert calls == ["/databases/db-1", "/data_sources/ds-resolved"]
     assert out["data_source_id"] == "ds-resolved"
-    print("PASS: notion_get_data_source_schema database_id -> data_source_id resolution")
+    # The database_id path makes two sequential calls - both must reuse the
+    # exact same connection object, not open a fresh one for each.
+    assert len(connections_seen) == 2
+    assert connections_seen[0] is not None and connections_seen[0] is connections_seen[1]
+    print("PASS: notion_get_data_source_schema database_id -> data_source_id resolution, reusing one connection across both calls")
 
-    def fake_request_multi(method, path, api_key, body=None, query=None, is_write=False):
+    def fake_request_multi(method, path, api_key, body=None, query=None, is_write=False, connection=None):
         return 200, {"data_sources": [{"id": "ds-a"}, {"id": "ds-b"}]}
 
     h._request = fake_request_multi
@@ -222,7 +229,7 @@ def test_get_data_source_schema(h) -> None:
         assert "ds-a" in str(exc) and "ds-b" in str(exc)
     print("PASS: notion_get_data_source_schema multi-data-source database rejected with ids listed")
 
-    def fake_request_malformed_single(method, path, api_key, body=None, query=None, is_write=False):
+    def fake_request_malformed_single(method, path, api_key, body=None, query=None, is_write=False, connection=None):
         return 200, {"data_sources": ["not-a-dict-entry"]}
 
     h._request = fake_request_malformed_single
