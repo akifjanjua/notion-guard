@@ -20,7 +20,7 @@
 
 **Two writes to the same property on the same page can silently overwrite each other** — Notion's API has no optimistic-concurrency support (no ETags, no conditional writes). If two `notion.update_page_properties` calls both set the same property on the same page close together, whichever request reaches Notion's servers last wins — neither caller is told a conflict occurred. This is a Notion API limitation Notion Guard cannot detect or prevent; avoid concurrent edits to the same field from two places at once.
 
-**"Notion API rate limit reached"** — Wait before retrying (the message includes Notion's own `Retry-After` value in seconds when Notion supplies one). Notion Guard never automatically retries a request. Narrow searches/queries and reuse IDs you've already discovered instead of re-querying broadly.
+**"Notion API rate limit reached"** — For a read, Notion Guard already retried up to twice (honoring Notion's `Retry-After` value when supplied, otherwise a short fixed backoff) before raising this; the message says "Notion Guard retried but the limit is still in effect" to confirm that happened. For a write, Notion Guard never automatically retries at all, since a retry could duplicate an unknown-outcome mutation; wait before retrying yourself. Narrow searches/queries and reuse IDs you've already discovered instead of re-querying broadly.
 
 **`children_json` or `properties_json` errors about invalid JSON** — These fields must be a JSON-encoded string containing Notion's exact documented shape (e.g. `{"Name":{"title":[{"text":{"content":"..."}}]}}`), not a plain string or a Python dict literal.
 

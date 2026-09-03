@@ -167,6 +167,16 @@ def main() -> int:
         if function_name not in functions:
             fail(f"{command_id}: handler function {function_name} not found")
 
+        input_schema = command.get("input_schema") or {}
+        for field_name, field_spec in input_schema.items():
+            description = field_spec.get("description") if isinstance(field_spec, dict) else None
+            if not isinstance(description, str) or not description.strip():
+                fail(
+                    f"{command_id}.{field_name}: input_schema fields must carry a "
+                    "non-empty description so Studio's Sends-tab form shows inline "
+                    "guidance instead of a bare field"
+                )
+
         if expected_mode == "write_requires_approval":
             if command.get("risk") not in {"medium", "high"}:
                 fail(f"{command_id}: write risk must be medium or high")

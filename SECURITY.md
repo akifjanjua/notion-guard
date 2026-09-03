@@ -30,7 +30,7 @@ Complex payloads (property values, block arrays, filters, sorts) are passed as J
 
 ## Retry and unknown-outcome policy
 
-The handler performs one HTTP attempt per command. Mutations are never automatically retried. If a timeout, connection failure, unreadable response, or HTTP 5xx response prevents confirmation of a write, the handler reports that the write outcome is unknown and instructs the user to check Notion before retrying.
+Every write performs exactly one HTTP attempt and is never automatically retried, since a retry could duplicate an unknown-outcome mutation. If a timeout, connection failure, unreadable response, or HTTP 5xx response prevents confirmation of a write, the handler reports that the write outcome is unknown and instructs the user to check Notion before retrying. Reads have no side effect, so a read may automatically retry up to twice on a transient HTTP 429/502/503/504 (honoring Notion's `Retry-After` value when one is supplied) before raising an error.
 
 ## Error handling and redaction
 

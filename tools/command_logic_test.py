@@ -442,6 +442,7 @@ def test_require_id_validation(h) -> None:
         must_reject(bad, "control character or space")
     for bad in ("../../v1/users", "abc/def", "abc\\def", "/etc/passwd"):
         must_reject(bad, "path separator")
+        must_reject(bad, "Notion URL")
     # No length check meant an oversized-but-otherwise-valid id (no control
     # chars, no slashes, pure ASCII) sailed past every other check, reached
     # Notion, and got rejected by Cloudflare's edge with a raw HTML 414 page

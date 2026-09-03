@@ -48,6 +48,10 @@ def main() -> int:
     print("PASS: no credential-file, environment, or subprocess fallback")
 
     h = load_handler()
+    # Read retries sleep for real between attempts; skip the wait so this
+    # suite stays fast, and record calls to confirm delays are actually used.
+    sleep_calls = []
+    h.time.sleep = lambda seconds: sleep_calls.append(seconds)
 
     h.__rc_helpers__ = {"vault_get": lambda provider: TEST_NOTION_TOKEN}
     assert h._load_api_key() == TEST_NOTION_TOKEN
@@ -60,9 +64,11 @@ def main() -> int:
 
     h.__rc_helpers__ = {"vault_get": lambda provider: None}
     expect_runtime_error(h._load_api_key, "not configured")
+    expect_runtime_error(h._load_api_key, "muhammad-akif-janjua-notion-guard::notion")
     h.__rc_helpers__ = {}
     expect_runtime_error(h._load_api_key, "vault_get")
-    print("PASS: missing vault configuration fails clearly")
+    expect_runtime_error(h._load_api_key, "muhammad-akif-janjua-notion-guard::notion")
+    print("PASS: missing vault configuration fails clearly, naming the namespaced credential card")
 
     secret = TEST_NOTION_TOKEN
     redacted = h._redact(f"Authorization: Bearer {secret}", secret)
@@ -112,11 +118,30 @@ def main() -> int:
         h.urllib.request.urlopen = original_urlopen
     print("PASS: mutation transport makes one attempt and hides low-level cause")
 
+    calls["count"] = 0
+    h.urllib.request.urlopen = failing_urlopen
+    try:
+        try:
+            h._request("GET", "/search", secret)
+        except RuntimeError as exc:
+            assert "check your network connection" in str(exc).lower()
+            assert "errno" not in str(exc).lower()  # no raw exception leaking through
+            assert exc.__cause__ is None
+        else:
+            raise AssertionError("expected a network-failure error")
+        assert calls["count"] == 1, "a connection-level failure should not be retried"
+    finally:
+        h.urllib.request.urlopen = original_urlopen
+    print("PASS: read connection failures get a clean plain-English message, not a raw exception, and are not retried")
+
     class _FakeHTTPError(urllib.error.HTTPError):
         def __init__(self, code, body, headers=None):
             super().__init__("http://x", code, "msg", headers or {}, io.BytesIO(body))
 
+    calls["count"] = 0
+
     def rate_limited_urlopen(*args, **kwargs):
+        calls["count"] += 1
         raise _FakeHTTPError(429, b'{"message": "rate limited"}')
 
     h.urllib.request.urlopen = rate_limited_urlopen
@@ -124,11 +149,19 @@ def main() -> int:
         expect_runtime_error(
             lambda: h._request("GET", "/search", secret), "rate limit"
         )
+        assert calls["count"] == 1 + h._MAX_READ_RETRIES, "read did not retry the expected number of times"
+        expect_runtime_error(
+            lambda: h._request("GET", "/search", secret), "retried but the limit is still in effect"
+        )
     finally:
         h.urllib.request.urlopen = original_urlopen
-    print("PASS: HTTP 429 gets a clear rate-limit message, not a generic HTTP-error one")
+    print("PASS: HTTP 429 on a read retries the bounded number of times, then gets a clear rate-limit message")
+
+    calls["count"] = 0
+    sleep_calls.clear()
 
     def rate_limited_with_retry_after(*args, **kwargs):
+        calls["count"] += 1
         raise _FakeHTTPError(
             429, b'{"message": "rate limited"}', headers={"Retry-After": "30"}
         )
@@ -138,9 +171,70 @@ def main() -> int:
         expect_runtime_error(
             lambda: h._request("GET", "/search", secret), "30 seconds"
         )
+        # Retry-After (30s) is capped at _MAX_RETRY_DELAY_SECONDS on every retry.
+        assert sleep_calls == [h._MAX_RETRY_DELAY_SECONDS] * h._MAX_READ_RETRIES
     finally:
         h.urllib.request.urlopen = original_urlopen
-    print("PASS: HTTP 429 with a Retry-After header surfaces the actual wait time")
+    print("PASS: HTTP 429 with a Retry-After header surfaces the actual wait time and caps the honored delay")
+
+    calls["count"] = 0
+
+    def always_503_urlopen(*args, **kwargs):
+        calls["count"] += 1
+        raise _FakeHTTPError(503, b"")
+
+    h.urllib.request.urlopen = always_503_urlopen
+    try:
+        expect_runtime_error(lambda: h._request("GET", "/search", secret), "503")
+        assert calls["count"] == 1 + h._MAX_READ_RETRIES
+    finally:
+        h.urllib.request.urlopen = original_urlopen
+    print("PASS: a read retries on HTTP 503 too, then fails with the usual HTTP-error message")
+
+    calls["count"] = 0
+
+    def flaky_then_ok_urlopen(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] < 3:
+            raise _FakeHTTPError(503, b"")
+
+        class _FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def getcode(self):
+                return 200
+
+            def read(self):
+                return b'{"ok": true}'
+
+        return _FakeResponse()
+
+    h.urllib.request.urlopen = flaky_then_ok_urlopen
+    try:
+        status, data = h._request("GET", "/search", secret)
+        assert status == 200 and data == {"ok": True}
+        assert calls["count"] == 3, "expected two failed attempts before the third succeeded"
+    finally:
+        h.urllib.request.urlopen = original_urlopen
+    print("PASS: a read that fails twice then succeeds returns the successful result on the retry")
+
+    calls["count"] = 0
+    h.urllib.request.urlopen = always_503_urlopen
+    try:
+        try:
+            h._request("PATCH", "/pages/x", secret, body={}, is_write=True)
+        except RuntimeError as exc:
+            assert "outcome is unknown" in str(exc)
+        else:
+            raise AssertionError("expected unknown write outcome")
+        assert calls["count"] == 1, "a write must never be retried, even on a retryable status"
+    finally:
+        h.urllib.request.urlopen = original_urlopen
+    print("PASS: a write never retries on HTTP 503, unlike a read")
 
     expect_runtime_error(
         lambda: h.notion_create_page(
