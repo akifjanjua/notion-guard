@@ -38,6 +38,17 @@ def test_simplify_helpers(h) -> None:
     assert h._simplify_rich_text(None) == ""
     assert h._simplify_rich_text("not-a-list") == ""
 
+    # A single rich-text field (a title, a property, a block's text) is
+    # capped so one outsized field can't blow up a page/list response's
+    # serialized JSON size, mirroring the same defensive idea in Linear
+    # Guard's per-field truncation for its own receipt-safe list responses.
+    huge_text = "x" * 5000
+    capped = h._simplify_rich_text(rich_text(huge_text))
+    assert len(capped) == h._MAX_RICH_TEXT_CHARS
+    assert capped == huge_text[: h._MAX_RICH_TEXT_CHARS]
+    short_text = "short title"
+    assert h._simplify_rich_text(rich_text(short_text)) == short_text
+
     assert h._simplify_property({"type": "title", "title": rich_text("Task one")}) == "Task one"
     assert h._simplify_property({"type": "rich_text", "rich_text": rich_text("notes")}) == "notes"
     assert h._simplify_property({"type": "select", "select": {"name": "Done"}}) == "Done"
