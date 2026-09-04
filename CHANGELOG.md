@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.0.7
 
-Follow-up to the 1.0.6 efficiency review, which found (but deliberately didn't touch) two real, repeated costs: confirmed via RailCall's own `module_sandbox.py`/`routes/modules.py` source that a Station module's handler namespace is `exec()`'d once per load/reload and its functions reused for every subsequent call - not re-executed fresh per call - so a per-call cost really does repeat for the module's whole loaded lifetime.
+Republished with `--price=6900` (explicit, per the standing gotcha) and a bumped version to ship the fixes below live. Follow-up to the 1.0.6 efficiency review, which found (but deliberately didn't touch) two real, repeated costs: confirmed via RailCall's own `module_sandbox.py`/`routes/modules.py` source that a Station module's handler namespace is `exec()`'d once per load/reload and its functions reused for every subsequent call - not re-executed fresh per call - so a per-call cost really does repeat for the module's whole loaded lifetime.
 
 - `_build_tls_context()` rebuilt the SSL context (and re-parsed the certifi CA bundle from disk) on every single `_request()` call. Now built once, lazily, and cached module-wide (`_TLS_CONTEXT`) - `certifi.where()`/`ssl.create_default_context()` run exactly once per module load, not once per command call.
 - `notion.get_data_source_schema`'s `database_id` path makes two sequential calls to `api.notion.com` (resolve the database's data source, then fetch that data source's schema); each opened and closed its own connection, paying for an avoidable second TCP+TLS handshake. `_request` now accepts an optional `connection` parameter; when supplied (via the new `_open_connection()` helper), both calls in this path reuse the same HTTPS connection. Every other command is unaffected - all other 9 commands make exactly one call each and continue opening a fresh connection per call, unchanged. `tools/command_logic_test.py` gained an assertion that both calls in the resolution path receive the identical connection object, not two separate ones.
