@@ -382,7 +382,16 @@ def test_create_page(h) -> None:
         raise AssertionError("expected parent_type rejection")
     except RuntimeError:
         pass
-    print("PASS: notion_create_page (body shape, response simplification, parent_type validation)")
+
+    try:
+        h.notion_create_page(
+            {"parent_type": "page_id", "parent_id": "p", "properties_json": "{}", "icon_emoji": "x" * 101},
+            None,
+        )
+        raise AssertionError("expected icon_emoji length rejection")
+    except RuntimeError as exc:
+        assert "too long" in str(exc) and "icon_emoji" in str(exc)
+    print("PASS: notion_create_page (body shape, response simplification, parent_type validation, icon_emoji length cap)")
 
 
 def test_update_page_properties(h) -> None:
@@ -438,7 +447,18 @@ def test_append_blocks(h) -> None:
         raise AssertionError("expected 100-block cap rejection")
     except RuntimeError as exc:
         assert "100" in str(exc)
-    print("PASS: notion_append_blocks (default position, response simplification, 100-block cap)")
+
+    # 0/False/""/[] are wrong-type values for `position`, not "not provided" -
+    # the old `inputs.get("position") or "end"` pattern silently swallowed any
+    # falsy value into the default instead of rejecting it, unlike in_trash's
+    # correct `is None` check.
+    for bad_position in (0, False, "", []):
+        try:
+            h.notion_append_blocks({"block_id": "b", "children_json": "[{}]", "position": bad_position}, None)
+            raise AssertionError(f"expected position={bad_position!r} to be rejected")
+        except RuntimeError as exc:
+            assert "position" in str(exc)
+    print("PASS: notion_append_blocks (default position, response simplification, 100-block cap, falsy position values rejected)")
 
 
 def test_require_id_validation(h) -> None:
@@ -501,6 +521,169 @@ def test_require_id_validation(h) -> None:
             pass
     print("PASS: _require_id (control characters, path separators, oversized ids rejected; "
           "valid ids pass; commands reject bad ids before any network attempt)")
+
+
+def test_json_nesting_guard(h) -> None:
+    # CPython's JSON decoder recurses per nesting level and can exhaust the
+    # C stack on pathologically deep input - RecursionError on some builds,
+    # a bare RuntimeError("Stack overflow...") on others - neither of which
+    # is a json.JSONDecodeError, so it used to escape every one of these
+    # fields uncaught instead of the module's usual clean error. A payload
+    # well past the 50-level guard, but still small (a few hundred bytes,
+    # not the ~34KB it actually takes to crash the real decoder) is enough
+    # to prove the pre-parse guard - not luck - is what rejects it.
+    deeply_nested = "[" * 200 + "]" * 200
+
+    def poisoned_request(*args, **kwargs):
+        raise AssertionError("must not reach the network for an over-deep JSON payload")
+
+    original_request = h._request
+    h._request = poisoned_request
+
+    try:
+        h.notion_create_page(
+            {"parent_type": "page_id", "parent_id": "p", "properties_json": "{" + deeply_nested + "}"},
+            None,
+        )
+        raise AssertionError("expected properties_json depth rejection")
+    except RuntimeError as exc:
+        assert "nested too deeply" in str(exc) and "properties_json" in str(exc)
+
+    try:
+        h.notion_append_blocks({"block_id": "b", "children_json": deeply_nested}, None)
+        raise AssertionError("expected children_json depth rejection")
+    except RuntimeError as exc:
+        assert "nested too deeply" in str(exc) and "children_json" in str(exc)
+
+    try:
+        h.notion_query_data_source({"data_source_id": "d", "filter_json": deeply_nested}, None)
+        raise AssertionError("expected filter_json depth rejection")
+    except RuntimeError as exc:
+        assert "nested too deeply" in str(exc) and "filter_json" in str(exc)
+
+    try:
+        h.notion_query_data_source({"data_source_id": "d", "sorts_json": deeply_nested}, None)
+        raise AssertionError("expected sorts_json depth rejection")
+    except RuntimeError as exc:
+        assert "nested too deeply" in str(exc) and "sorts_json" in str(exc)
+
+    # Deep nesting hidden inside an otherwise-shallow, valid-looking object
+    # must also be caught - the guard scans the whole raw string, not just
+    # top-level structure.
+    try:
+        h.notion_create_page(
+            {
+                "parent_type": "page_id",
+                "parent_id": "p",
+                "properties_json": '{"Weird": ' + deeply_nested + "}",
+            },
+            None,
+        )
+        raise AssertionError("expected depth rejection for nesting inside a property value")
+    except RuntimeError as exc:
+        assert "nested too deeply" in str(exc)
+    finally:
+        h._request = original_request
+
+    # A realistic, legitimately-shaped (shallow) payload must still pass -
+    # the guard must not reject ordinary Notion structures.
+    real_children = json.dumps(
+        [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": [{"text": {"content": "hi"}}]}}]
+    )
+    assert h._json_nesting_too_deep(real_children) is False
+
+    print(
+        "PASS: pathologically deep JSON in properties_json/children_json/filter_json/sorts_json "
+        "is rejected fast and cleanly (before any network attempt), nested-inside-a-value depth is "
+        "also caught, and ordinary shallow payloads are unaffected"
+    )
+
+
+def test_connection_reuse_fallback(_unused_h) -> None:
+    # If a reused connection (get_data_source_schema's database_id path)
+    # goes stale between its two calls - e.g. the far end dropped an idle
+    # keep-alive socket while the first call's retries were sleeping - the
+    # whole operation must not fail just because the SECOND call's reused
+    # connection is dead. It should fall back to a fresh one-off request,
+    # exactly as if connection reuse were never attempted for that call.
+    #
+    # Loads its own fresh handler instance rather than reusing the shared
+    # one other tests in this file mutate (several leave h._request pointed
+    # at a poisoned stub without restoring it) - this test needs the REAL
+    # _request/_attempt_once chain intact, not whatever the previous test
+    # happened to leave behind.
+    h = load_handler()
+
+    class _Headers(dict):
+        def get(self, key, default=None):
+            return dict.get(self, key, default)
+
+    class _ConnResponse:
+        def __init__(self, status, body):
+            self.status = status
+            self._body = body
+            self.headers = _Headers()
+
+        def read(self):
+            return self._body
+
+    class _FlakyConnection:
+        def __init__(self):
+            self.calls = 0
+
+        def request(self, method, path, body=None, headers=None):
+            self.calls += 1
+            if self.calls == 1:
+                self._pending = _ConnResponse(200, b'{"data_sources":[{"id":"ds-resolved"}]}')
+            else:
+                # The second call (fetching the resolved data source's
+                # schema) finds the connection dead.
+                raise ConnectionResetError("connection reset by peer")
+
+        def getresponse(self):
+            return self._pending
+
+        def close(self):
+            pass
+
+    class _UrlResponse:
+        headers = _Headers()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def getcode(self):
+            return 200
+
+        def read(self):
+            return b'{"id":"ds-resolved","title":[],"properties":{}}'
+
+    fallback_calls = {"count": 0}
+
+    def fake_urlopen(*args, **kwargs):
+        fallback_calls["count"] += 1
+        return _UrlResponse()
+
+    fake_connection = _FlakyConnection()
+    original_open_connection = h._open_connection
+    original_urlopen = h.urllib.request.urlopen
+    h._open_connection = lambda: fake_connection
+    h.urllib.request.urlopen = fake_urlopen
+    try:
+        out, _ = h.notion_get_data_source_schema({"database_id": "d" * 32}, None)
+        assert out["data_source_id"] == "ds-resolved"
+        assert fake_connection.calls == 2, "expected both calls to attempt the shared connection first"
+        assert fallback_calls["count"] == 1, "expected exactly one fresh-request fallback for the dead connection"
+    finally:
+        h._open_connection = original_open_connection
+        h.urllib.request.urlopen = original_urlopen
+    print(
+        "PASS: a reused connection that goes stale between the two get_data_source_schema calls "
+        "falls back to a fresh request instead of failing the whole operation"
+    )
 
 
 def test_create_comment(h) -> None:
@@ -644,6 +827,8 @@ def main() -> int:
     test_get_page(h)
     test_get_page_content(h)
     test_require_id_validation(h)
+    test_json_nesting_guard(h)
+    test_connection_reuse_fallback(h)
     test_list_users(h)
     test_create_page(h)
     test_update_page_properties(h)
