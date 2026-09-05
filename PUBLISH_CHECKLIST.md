@@ -53,8 +53,8 @@ python tools/release_acceptance_test.py
 Expected assets:
 
 ```text
-dist/notion-guard-v1.0.7.zip
-dist/notion-guard-v1.0.7.files.json
+dist/notion-guard-v1.0.8.zip
+dist/notion-guard-v1.0.8.files.json
 ```
 
 (The version segment tracks `module.json`'s `version` field — update this if it changes again.)

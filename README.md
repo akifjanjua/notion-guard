@@ -8,26 +8,26 @@ Notion Guard is a governance-first RailCall module for small teams running their
 
 Reads: `notion.search`, `notion.get_data_source_schema`, `notion.query_data_source`, `notion.get_page`, `notion.get_page_content`, and `notion.list_users`. By default these execute immediately since they cannot alter workspace state — but a Station-wide policy (`a2d3bf`) can upgrade every command from a network-capable module to require approval, reads included. If a read shows `blocked_by_policy`, see [Troubleshooting](docs/TROUBLESHOOTING.md).
 
-Writes: `notion.create_page`, `notion.update_page_properties`, `notion.append_blocks`, and `notion.create_comment`. Every write uses `write_requires_approval`, binding human approval to the exact payload with a signed receipt. `notion.update_page_properties` also archives/restores a page via its `in_trash` field — same command, not a separate delete.
+Writes: `notion.create_page`, `notion.update_page_properties`, `notion.append_blocks`, and `notion.create_comment`. Every write uses `write_requires_approval`, binding human approval to the exact payload with a signed receipt, and refuses one past 30 minutes old (RailCall approvals never expire on their own). `notion.update_page_properties` also archives/restores a page via `in_trash` — same command, not a separate delete.
 
 `notion.get_data_source_schema` and `notion.list_users` exist for usability: confirm real property names/options before writing, and address teammates by name instead of raw UUIDs. All 10 commands act on one item at a time by design, not a missing batch feature.
 
 ## Egress contract
 
-The signed manifest declares `allowed_destinations: [{"provider":"notion","hosts":["api.notion.com"]}]` — Notion only, zero LLM/model-provider destinations, enforced by Station at load time. See [SECURITY.md](SECURITY.md).
+The signed manifest declares `allowed_destinations: [{"provider":"notion","hosts":["api.notion.com"]}]` — Notion only, zero LLM/model-provider destinations. See [SECURITY.md](SECURITY.md).
 
 ## Install
 
-Pre-publish (current state):
+Pre-publish:
 
 ```bash
 python -m pip install certifi
 git clone https://github.com/akifjanjua/notion-guard.git
 ```
 
-Copy the cloned folder's contents into `~/.railcall/station/modules/muhammad-akif-janjua-notion-guard/` (the folder name is the module slug). Open RailCall Studio, reload **Modules**, and confirm **Notion Guard v1.0.7**, **signature verified**, **10 commands**.
+Copy the cloned folder's contents into `~/.railcall/station/modules/muhammad-akif-janjua-notion-guard/` (the folder name is the module slug). Open RailCall Studio, reload **Modules**, and confirm **Notion Guard v1.0.8**, **signature verified**, **10 commands**.
 
-Post-publish, this will work instead:
+Post-publish:
 
 ```bash
 railcall market install muhammad-akif-janjua/notion-guard

@@ -12,8 +12,12 @@ validation and low-level transport mechanics.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
+import os
+import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -523,6 +527,113 @@ def test_create_comment(h) -> None:
     print("PASS: notion_create_comment (parent shape, 2000-char cap)")
 
 
+def test_approval_freshness(h) -> None:
+    def canonical(inputs):
+        return json.dumps(inputs or {}, sort_keys=True, separators=(",", ":"), default=str)
+
+    def idem_for(cmd_id, inputs):
+        return "idem_" + hashlib.sha256((cmd_id + "|" + canonical(inputs)).encode("utf-8")).hexdigest()[:24]
+
+    def jload(path, default):
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except OSError:
+            return default
+
+    def timestamp_minutes_ago(minutes):
+        return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - minutes * 60))
+
+    with tempfile.TemporaryDirectory() as ws:
+        original_helpers = h.__rc_helpers__
+        h.__rc_helpers__ = dict(original_helpers, WS=ws, jload=jload)
+        pending_path = os.path.join(ws, "pending_approvals.json")
+
+        def write_pending(entries):
+            with open(pending_path, "w", encoding="utf-8") as f:
+                json.dump(entries, f)
+
+        try:
+            create_page_inputs = {
+                "parent_type": "data_source_id",
+                "parent_id": "ds-1",
+                "properties_json": "{}",
+            }
+            idem = idem_for("notion.create_page", create_page_inputs)
+
+            # No pending_approvals.json at all yet -> fail open, never block.
+            h._check_approval_freshness("notion.create_page", create_page_inputs)
+
+            # Fresh approval (5 minutes old, well under the 30-minute limit) -> no block.
+            write_pending({idem: {"approval": {"timestamp": timestamp_minutes_ago(5)}}})
+            h._check_approval_freshness("notion.create_page", create_page_inputs)
+
+            # Stale approval (45 minutes old) -> blocked, with a message naming the age and the limit.
+            write_pending({idem: {"approval": {"timestamp": timestamp_minutes_ago(45)}}})
+            try:
+                h._check_approval_freshness("notion.create_page", create_page_inputs)
+                raise AssertionError("expected a stale-approval rejection")
+            except RuntimeError as exc:
+                assert "45 minutes old" in str(exc)
+                assert "30-minute" in str(exc)
+
+            # A different payload for the same command hashes to a different idem
+            # key, so it must not be caught by another payload's stale approval.
+            h._check_approval_freshness("notion.create_page", {**create_page_inputs, "parent_id": "ds-2"})
+
+            # No record at all for this exact idem -> fail open, not a false block.
+            write_pending({"idem_unrelated": {"approval": {"timestamp": timestamp_minutes_ago(999)}}})
+            h._check_approval_freshness("notion.create_page", create_page_inputs)
+
+            # A row that's staged but not yet approved (approval still None) ->
+            # fail open, never a false "stale" verdict on a never-approved row.
+            write_pending({idem: {"approval": None, "status": "pending_approval"}})
+            h._check_approval_freshness("notion.create_page", create_page_inputs)
+            print(
+                "PASS: _check_approval_freshness (fresh passes, stale blocks with age+limit "
+                "in the message, wrong/missing/not-yet-approved record fails open)"
+            )
+
+            # Confirm all 4 write commands actually call the check, and that a
+            # stale approval blocks before any network attempt.
+            def poisoned_request(*args, **kwargs):
+                raise AssertionError("must not reach the network when the approval is stale")
+
+            original_request = h._request
+            h._request = poisoned_request
+            try:
+                stale_cases = [
+                    ("notion.create_page", h.notion_create_page, create_page_inputs),
+                    (
+                        "notion.update_page_properties",
+                        h.notion_update_page_properties,
+                        {"page_id": "p-1", "in_trash": True},
+                    ),
+                    (
+                        "notion.append_blocks",
+                        h.notion_append_blocks,
+                        {"block_id": "b-1", "children_json": "[{}]"},
+                    ),
+                    (
+                        "notion.create_comment",
+                        h.notion_create_comment,
+                        {"parent_type": "page_id", "parent_id": "p-1", "text": "hi"},
+                    ),
+                ]
+                for cmd_id, fn, cmd_inputs in stale_cases:
+                    write_pending({idem_for(cmd_id, cmd_inputs): {"approval": {"timestamp": timestamp_minutes_ago(45)}}})
+                    try:
+                        fn(cmd_inputs, None)
+                        raise AssertionError(f"expected {cmd_id} to reject a stale approval")
+                    except RuntimeError as exc:
+                        assert "45 minutes old" in str(exc), f"{cmd_id}: {exc}"
+            finally:
+                h._request = original_request
+            print("PASS: all 4 write commands reject a stale approval before any network attempt")
+        finally:
+            h.__rc_helpers__ = original_helpers
+
+
 def main() -> int:
     h = load_handler()
     test_simplify_helpers(h)
@@ -538,6 +649,7 @@ def main() -> int:
     test_update_page_properties(h)
     test_append_blocks(h)
     test_create_comment(h)
+    test_approval_freshness(h)
     print("COMMAND LOGIC TESTS PASSED")
     return 0
 
